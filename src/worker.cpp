@@ -34,17 +34,14 @@ void worker::set_vars(const std::vector<bool>& read, const std::vector<bool>& wr
   write_vars.assign(write.begin(), write.end());
 }
 
-bool worker::process(std::shared_ptr<void> state, std::shared_ptr<void> msg) {
+void worker::process(std::shared_ptr<void> state, std::shared_ptr<void> msg) {
   {
     std::lock_guard<std::mutex> lock(worker_mutex);
-    if (processing || !process_consumed) return false;
 
     worker_state = state;
     worker_msg = msg;
   }
   worker_cond.notify_one();
-
-  return true;
 }
 
 std::shared_ptr<void> worker::consume_process() {
@@ -57,10 +54,12 @@ std::shared_ptr<void> worker::consume_process() {
 
 void worker::worker_method(const std::function<void(std::shared_ptr<void>, std::shared_ptr<void>)>& func) {
   while (running) {
+    std::unique_lock<std::mutex> lock(worker_mutex);
+    worker_cond.wait(lock, [&]{ return !running || (worker_state && worker_msg); });
+    if (!running) break;
+
     {
-      std::unique_lock<std::mutex> lock(worker_mutex);
-      worker_cond.wait(lock, [&]{ return !running || (worker_state && worker_msg); });
-      if (!running) break;
+      std::lock_guard<std::mutex> lock(scheduler_mutex);
 
       processing = true;
       process_consumed = false;
@@ -69,8 +68,7 @@ void worker::worker_method(const std::function<void(std::shared_ptr<void>, std::
     func(worker_state, worker_msg);
 
     {
-      std::lock_guard<std::mutex> lock1(worker_mutex);
-      std::lock_guard<std::mutex> lock2(scheduler_mutex);
+      std::lock_guard<std::mutex> lock(scheduler_mutex);
 
       processing = false;
     }

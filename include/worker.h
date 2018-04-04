@@ -38,7 +38,7 @@ class worker {
 
     void set_vars(const std::vector<bool>&, const std::vector<bool>&);
 
-    bool process(std::shared_ptr<void>, std::shared_ptr<void>);
+    void process(std::shared_ptr<void>, std::shared_ptr<void>);
     std::shared_ptr<void> consume_process();
 
   private:

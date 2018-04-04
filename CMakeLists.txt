@@ -21,8 +21,9 @@ target_include_directories(interpreter
 
 target_sources(interpreter
   PRIVATE
-    "src/main.cpp"
     "src/worker.cpp"
     "src/scheduler.cpp"
     "src/runtime.cpp"
+    "src/test_runtime.cpp"
+    "src/main.cpp"
 )
