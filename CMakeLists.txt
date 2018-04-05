@@ -9,19 +9,21 @@ find_package(Threads REQUIRED)
 add_executable(interpreter "")
 
 target_link_libraries(interpreter
-  Threads::Threads
+        Threads::Threads
 )
 
-target_include_directories(interpreter
-  PRIVATE
-    "include/"
+target_include_directories(interpreter PRIVATE
+        "src/"
 )
 
-target_sources(interpreter
-  PRIVATE
-    "src/Worker.cpp"
-    "src/Scheduler.cpp"
-    "src/Runtime.cpp"
-    "src/TestRuntime.cpp"
-    "src/main.cpp"
+target_sources(interpreter PRIVATE
+        "src/Worker.h"
+        "src/Worker.cpp"
+        "src/Scheduler.h"
+        "src/Scheduler.cpp"
+        "src/Runtime.h"
+        "src/Runtime.cpp"
+        "src/TestRuntime.h"
+        "src/TestRuntime.cpp"
+        "src/main.cpp"
 )

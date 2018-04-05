@@ -2,81 +2,81 @@
 
 #include "Worker.h"
 
-worker::worker(int vars_count, std::mutex& mutex, std::condition_variable& cond) :
-    vars_count(vars_count), scheduler_mutex(mutex), scheduler_cond(cond),
-    read_vars(vars_count, false), write_vars(vars_count, false) {
+Worker::Worker(int vars_count, std::mutex &mutex, std::condition_variable &cond) :
+        varsCount(vars_count), schedulerMutex(mutex), schedulerCond(cond),
+        readVars(vars_count, false), writeVars(vars_count, false) {
 }
 
-void worker::start(const std::function<void(std::shared_ptr<void>, std::shared_ptr<void>)>& func) {
-  running = true;
-  processing = false;
-  process_consumed = false;
+void Worker::start(const std::function<void(std::shared_ptr<void>, std::shared_ptr<void>)> &func) {
+    running = true;
+    processing = false;
+    processConsumed = false;
 
-  worker_thread = std::thread(&worker::worker_method, std::ref(*this), func);
+    workerThread = std::thread(&Worker::workerMethod, std::ref(*this), func);
 }
 
-void worker::stop() {
-  {
-    std::lock_guard<std::mutex> lock(worker_mutex);
-    running = false;
-  }
-  worker_cond.notify_one();
-
-  worker_thread.join();
-}
-
-void worker::clear_vars() {
-  read_vars.assign(vars_count, false);
-  write_vars.assign(vars_count, false);
-}
-
-void worker::set_vars(const std::vector<bool>& read, const std::vector<bool>& write) {
-  if (read_vars.size() != vars_count || write_vars.size() != vars_count) {
-    throw std::runtime_error("Incorrect number of variables in the input vectors.");
-  }
-
-  read_vars.assign(read.begin(), read.end());
-  write_vars.assign(write.begin(), write.end());
-}
-
-void worker::process(std::shared_ptr<void> state, std::shared_ptr<void> msg) {
-  {
-    std::lock_guard<std::mutex> lock(worker_mutex);
-
-    worker_state = state;
-    worker_msg = msg;
-  }
-  worker_cond.notify_one();
-}
-
-std::shared_ptr<void> worker::consume_process() {
-  std::lock_guard<std::mutex> lock(worker_mutex);
-  if (processing) return std::shared_ptr<void>();
-
-  process_consumed = true;
-  return worker_state;
-}
-
-void worker::worker_method(const std::function<void(std::shared_ptr<void>, std::shared_ptr<void>)>& func) {
-  while (running) {
-    std::unique_lock<std::mutex> lock(worker_mutex);
-    worker_cond.wait(lock, [&]{ return !running || (worker_state && worker_msg); });
-    if (!running) break;
-
+void Worker::stop() {
     {
-      std::lock_guard<std::mutex> lock(scheduler_mutex);
+        std::lock_guard<std::mutex> lock(workerMutex);
+        running = false;
+    }
+    workerCond.notify_one();
 
-      processing = true;
-      process_consumed = false;
+    workerThread.join();
+}
+
+void Worker::clearVars() {
+    readVars.assign(varsCount, false);
+    writeVars.assign(varsCount, false);
+}
+
+void Worker::setVars(const std::vector<bool> &read, const std::vector<bool> &write) {
+    if (readVars.size() != varsCount || writeVars.size() != varsCount) {
+        throw std::runtime_error("Incorrect number of variables in the input vectors.");
     }
 
-    func(worker_state, worker_msg);
+    readVars.assign(read.begin(), read.end());
+    writeVars.assign(write.begin(), write.end());
+}
 
+void Worker::process(std::shared_ptr<void> state, std::shared_ptr<void> msg) {
     {
-      std::lock_guard<std::mutex> lock(scheduler_mutex);
+        std::lock_guard<std::mutex> lock(workerMutex);
 
-      processing = false;
+        workerState = state;
+        workerMessage = msg;
     }
-    scheduler_cond.notify_one();
-  }
+    workerCond.notify_one();
+}
+
+std::shared_ptr<void> Worker::consumeProcess() {
+    std::lock_guard<std::mutex> lock(workerMutex);
+    if (processing) return std::shared_ptr<void>();
+
+    processConsumed = true;
+    return workerState;
+}
+
+void Worker::workerMethod(const std::function<void(std::shared_ptr<void>, std::shared_ptr<void>)> &func) {
+    while (running) {
+        std::unique_lock<std::mutex> lock(workerMutex);
+        workerCond.wait(lock, [&] { return !running || (workerState && workerMessage); });
+        if (!running) break;
+
+        {
+            std::lock_guard<std::mutex> lock(schedulerMutex);
+
+            processing = true;
+            processConsumed = false;
+        }
+
+        func(workerState, workerMessage);
+
+        {
+            std::lock_guard<std::mutex> lock(schedulerMutex);
+
+            processing = false;
+        }
+        schedulerCond.notify_one();
+    }
 }
