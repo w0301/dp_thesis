@@ -1,6 +1,6 @@
 #include <stdexcept>
 
-#include "scheduler.h"
+#include "Scheduler.h"
 
 using namespace std;
 
@@ -56,16 +56,25 @@ void base_scheduler::process_main() {
     });
     if (!running) break;
 
-    // consume worker results
-    if (freeWorker) {
-      // TODO : merge states
+    // consume Worker results
+    if (freeWorker && !freeWorker->is_process_consumed()) {
+      auto workerState = freeWorker->consume_process();
+      state = merge_states(state, workerState, freeWorker->get_write_vars());
+
+      freeWorker->clear_vars();
     }
 
     // schedule message
     if (schedulableMsg) {
-      // TODO : mark variables
-      // TODO : copy state if needed
-      freeWorker->process(state, schedulableMsg);
+      // locking variables
+      auto vars = get_message_vars(schedulableMsg);
+      freeWorker->set_vars(vars.first, vars.second);
+
+      // acquiring state
+      auto workerState = acquire_state(state);
+
+      // and processing messsage after that
+      freeWorker->process(workerState, schedulableMsg);
 
       // delete msg
       for (auto it = queue.begin(); it != queue.end(); it++) {
@@ -79,6 +88,9 @@ void base_scheduler::process_main() {
 }
 
 worker* base_scheduler::get_free_worker() {
+  for (auto worker : workers) {
+    if (!worker->is_processing() && !worker->is_process_consumed()) return worker;
+  }
   for (auto worker : workers) {
     if (!worker->is_processing()) return worker;
   }

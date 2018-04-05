@@ -21,11 +21,11 @@ class worker {
     }
 
     bool is_processing() const {
-      return running;
+      return processing;
     }
 
     bool is_process_consumed() const {
-      return running;
+      return process_consumed;
     }
 
     bool is_reading(int var_index) const {
@@ -36,6 +36,15 @@ class worker {
       return write_vars[var_index];
     };
 
+    const std::vector<bool>& get_read_vars() const {
+      return read_vars;
+    };
+
+    const std::vector<bool>& get_write_vars() const {
+      return write_vars;
+    };
+
+    void clear_vars();
     void set_vars(const std::vector<bool>&, const std::vector<bool>&);
 
     void process(std::shared_ptr<void>, std::shared_ptr<void>);

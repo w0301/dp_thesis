@@ -1,6 +1,6 @@
 #include <stdexcept>
 
-#include "worker.h"
+#include "Worker.h"
 
 worker::worker(int vars_count, std::mutex& mutex, std::condition_variable& cond) :
     vars_count(vars_count), scheduler_mutex(mutex), scheduler_cond(cond),
@@ -23,6 +23,11 @@ void worker::stop() {
   worker_cond.notify_one();
 
   worker_thread.join();
+}
+
+void worker::clear_vars() {
+  read_vars.assign(vars_count, false);
+  write_vars.assign(vars_count, false);
 }
 
 void worker::set_vars(const std::vector<bool>& read, const std::vector<bool>& write) {
