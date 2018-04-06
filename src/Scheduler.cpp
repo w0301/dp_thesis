@@ -50,14 +50,19 @@ void Scheduler::stop(bool wait) {
 }
 
 bool Scheduler::process(SchedulerMessage& msg) {
-    if (msg.getType() == SchedulerMessage::Process) {
+    if (msg.getType() == SchedulerMessage::Process || msg.getType() == SchedulerMessage::Reprocess) {
         auto worker = getAvailableWorker();
 
         if (worker == NULL) {
             // reschedule message again
-            schedule(msg.getMessage());
+            reschedule(msg.getMessage());
 
-            // TODO : wait for release or exit message here!
+            // wait for release or exit message here - because no worker are available so no need to try scheduling
+            waitFor([&](const SchedulerMessage& m) {
+                return m.getType() == SchedulerMessage::Release ||
+                       m.getType() == SchedulerMessage::Exit ||
+                       m.getType() == SchedulerMessage::LazyExit;
+            });
 
             return true;
         }
@@ -69,12 +74,23 @@ bool Scheduler::process(SchedulerMessage& msg) {
             worker->schedule(acquireState(currState), msg.getMessage());
         }
         else {
-            // TODO : add special message type which cause scheduler wait for the release message!
+            // add special message type which cause scheduler wait for the release/process messages
+            waitSchedulable();
 
-            schedule(msg.getMessage());
+            // reschedule not-processed message
+            reschedule(msg.getMessage());
         }
 
         return true;
+    }
+    else if (msg.getType() == SchedulerMessage::Wait) {
+        // wait for release, exit or process message here - because all scheduled messages were not schedulable
+        waitFor([&](const SchedulerMessage& m) {
+            return m.getType() == SchedulerMessage::Release ||
+                   m.getType() == SchedulerMessage::Process ||
+                   m.getType() == SchedulerMessage::Exit ||
+                   m.getType() == SchedulerMessage::LazyExit;
+        });
     }
     else if (msg.getType() == SchedulerMessage::Release) {
         auto worker = workers[msg.getSenderIndex()];

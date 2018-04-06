@@ -3,10 +3,16 @@
 
 #include <mutex>
 #include <queue>
+#include <functional>
 #include <condition_variable>
 
 template <class T> class Queue {
 public:
+    void waitFor(const std::function<bool(const T&)>& func) {
+        std::unique_lock<std::mutex> lock(mutex);
+        while (queue.empty() || !func(queue.top())) cond.wait(lock);
+    }
+
     T pop() {
         std::unique_lock<std::mutex> lock(mutex);
         while (queue.empty()) cond.wait(lock);

@@ -92,7 +92,7 @@ private:
 class SchedulerMessage {
 public:
     enum Type {
-        Exit = 1000, Release = 100, Process = 10, LazyExit = 1
+        Exit = 1000, Release = 100, Process = 10, Wait = 7, Reprocess = 5, LazyExit = 1
     };
 
     SchedulerMessage(Type type, int index, std::shared_ptr<void> state, std::shared_ptr<void> message) :
@@ -150,6 +150,14 @@ public:
     }
 
 protected:
+    void waitSchedulable() {
+        send(SchedulerMessage(SchedulerMessage::Wait, -1, std::shared_ptr<void>(), std::shared_ptr<void>()));
+    }
+
+    void reschedule(std::shared_ptr<void> message) {
+        send(SchedulerMessage(SchedulerMessage::Reprocess, -1, std::shared_ptr<void>(), std::move(message)));
+    }
+
     friend class SchedulerWorker;
 
     bool process(SchedulerMessage& msg) override;

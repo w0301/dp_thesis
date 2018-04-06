@@ -60,8 +60,8 @@ void TestRuntime::run() {
 
     scheduler.start();
 
-    for (int i = 0; i < 1000; i++) {
-        scheduler.schedule(make_shared<TestMessage>(vars, 5));
+    for (int i = 0; i < 500; i++) {
+        scheduler.schedule(make_shared<TestMessage>(vars, 10));
     }
 
     scheduler.stop(true);

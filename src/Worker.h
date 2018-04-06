@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <thread>
+#include <functional>
 
 #include "Queue.h"
 
@@ -40,6 +41,10 @@ public:
 
 protected:
     virtual bool process(T& msg) = 0;
+
+    void waitFor(const std::function<bool(const T&)>& func) {
+        queue.waitFor(func);
+    }
 
 private:
     Queue<T> queue;
