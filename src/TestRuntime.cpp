@@ -12,9 +12,19 @@ using namespace std;
 
 
 // Message
-TestMessage::TestMessage(int varsCount, int processTime) :
-        readVars(varsCount, false), writeVars(varsCount, false), processTime(processTime) {
-    // TODO : random generation of readVars and writeVars
+TestMessage::TestMessage(int varsCount) {
+    int readCount = 0;
+    int writeCount = 0;
+
+    for (int i = 0; i < varsCount; i++) {
+        readVars.push_back((bool)(rand() % 2));
+        if (readVars[i]) readCount += 1;
+
+        writeVars.push_back((bool)(rand() % 2));
+        if (writeVars[i]) writeCount += 1;
+    }
+
+    processTime = readCount * 2 + writeCount * 3;
 }
 
 // Scheduler
@@ -39,7 +49,7 @@ std::shared_ptr<void> TestScheduler::acquireState(std::shared_ptr<void> state) {
     return state;
 }
 
-std::shared_ptr<void> TestScheduler::mergeStates(std::shared_ptr<void> globalState, std::shared_ptr<void> workerState, const std::vector<bool>& writeVars) {
+std::shared_ptr<void> TestScheduler::mergeStates(std::shared_ptr<void>, std::shared_ptr<void> workerState, const std::vector<bool>&) {
     return workerState;
 }
 
@@ -52,16 +62,20 @@ std::pair< std::vector<bool>, std::vector<bool> > TestScheduler::getMessageVars(
 
 // Runtime
 void TestRuntime::run() {
-    int workers = 4, vars = 10;
+    int workers = 2, vars = 10;
 
-    TestScheduler scheduler(Scheduler::RWLocking, workers, vars);
+    TestScheduler scheduler(Scheduler::WLocking, workers, vars);
 
     auto start = std::chrono::high_resolution_clock::now();
 
     scheduler.start();
 
+    int totalProcessTime = 0;
     for (int i = 0; i < 500; i++) {
-        scheduler.schedule(make_shared<TestMessage>(vars, 10));
+        auto msg = make_shared<TestMessage>(vars);
+        totalProcessTime += msg->getProcessTime();
+
+        scheduler.schedule(msg);
     }
 
     scheduler.stop(true);
@@ -70,4 +84,5 @@ void TestRuntime::run() {
 
     std::chrono::duration<double, std::milli> elapsed = end - start;
     cout << "Computation took: " << elapsed.count() << " milliseconds" << endl;
+    cout << "Expected computation time: " << totalProcessTime << " milliseconds" << endl;
 }

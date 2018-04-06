@@ -74,23 +74,11 @@ bool Scheduler::process(SchedulerMessage& msg) {
             worker->schedule(acquireState(currState), msg.getMessage());
         }
         else {
-            // add special message type which cause scheduler wait for the release/process messages
-            waitSchedulable();
-
             // reschedule not-processed message
             reschedule(msg.getMessage());
         }
 
         return true;
-    }
-    else if (msg.getType() == SchedulerMessage::Wait) {
-        // wait for release, exit or process message here - because all scheduled messages were not schedulable
-        waitFor([&](const SchedulerMessage& m) {
-            return m.getType() == SchedulerMessage::Release ||
-                   m.getType() == SchedulerMessage::Process ||
-                   m.getType() == SchedulerMessage::Exit ||
-                   m.getType() == SchedulerMessage::LazyExit;
-        });
     }
     else if (msg.getType() == SchedulerMessage::Release) {
         auto worker = workers[msg.getSenderIndex()];
@@ -122,7 +110,7 @@ bool Scheduler::isSchedulable(const std::vector<bool>& readVars, const std::vect
 
         if (type == RWLocking) {
             for (auto worker : workers) {
-                if (worker->getReadVars()[i] || worker->getWriteVars()[i]) {
+                if (worker->getWriteVars()[i]) {
                     locked = true;
                     break;
                 }

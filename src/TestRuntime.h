@@ -7,7 +7,7 @@
 
 class TestMessage {
 public:
-    TestMessage(int varsCount, int processTime);
+    TestMessage(int varsCount);
 
     const std::vector<bool> &getReadVars() const {
         return readVars;
