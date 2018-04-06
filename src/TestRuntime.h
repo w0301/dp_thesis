@@ -8,7 +8,7 @@
 
 class TestMessage {
 public:
-    TestMessage(int varsCount);
+    TestMessage(int varsCount, double, double);
 
     const std::vector<bool> &getReadVars() const {
         return readVars;
@@ -44,13 +44,15 @@ class TestRuntime {
 public:
     void runTests();
 
-    void prepare(int, int);
+    void prepare(int, int, double, double);
     void run(Scheduler::Type, int);
 
 private:
     void runPreparedTests();
 
     int varsCount;
+    double readLambda;
+    double writeLambda;
     int totalProcessingTime;
     std::vector<std::shared_ptr<TestMessage> > messages;
 };

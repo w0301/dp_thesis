@@ -3,7 +3,9 @@
 #include <thread>
 #include <chrono>
 #include <random>
+#include <string>
 #include <cstdlib>
+#include <sstream>
 #include <iostream>
 #include <functional>
 
@@ -14,6 +16,7 @@ using namespace std;
 // Message
 int probGenerate(vector<bool>& res, const function<double(int)>& probFunc) {
     int varsCount = (int)res.size();
+    if (varsCount == 0) return 0;
 
     // building roulette count of variables
     double rouletteSum = 0;
@@ -51,16 +54,14 @@ int probGenerate(vector<bool>& res, const function<double(int)>& probFunc) {
     return count;
 }
 
-TestMessage::TestMessage(int varsCount) :
+TestMessage::TestMessage(int varsCount, double readLambda, double writeLambda) :
         readVars(varsCount, false), writeVars(varsCount, false) {
-    double lambda = 2;
-
     int readsCount = probGenerate(readVars, [&](int c) {
-        return exp(-1.0 * lambda * ((double)c / (double)varsCount));
+        return exp(-1.0 * readLambda * ((double)c / (double)varsCount));
     });
 
     int writesCount = probGenerate(writeVars, [&](int c) {
-        return exp(-1.0 * lambda * ((double)c / (double)varsCount));
+        return exp(-1.0 * writeLambda * ((double)c / (double)varsCount));
     });
 
     // set process time based on message impact
@@ -101,37 +102,39 @@ std::pair< std::vector<bool>, std::vector<bool> > TestScheduler::getMessageVars(
 
 // Runtime
 void TestRuntime::runTests() {
-    prepare(2, 1000);
+    prepare(1000, 0, 2.0, 4.0);
     runPreparedTests();
 
-    prepare(5, 1000);
+    prepare(1000, 5, 2.0, 4.0);
     runPreparedTests();
 
-    prepare(10, 1000);
+    prepare(1000, 10, 2.0, 4.0);
+    runPreparedTests();
+
+    prepare(1000, 20, 2.0, 4.0);
     runPreparedTests();
 }
 
 void TestRuntime::runPreparedTests() {
-    cout << varsCount << " vars and " << messages.size() << " messages:" << endl;
-    {
-        run(Scheduler::RWLocking, 1);
+    run(Scheduler::RWLocking, 1);
 
-        run(Scheduler::RWLocking, 2);
-        run(Scheduler::RWLocking, 4);
+    run(Scheduler::RWLocking, 2);
+    run(Scheduler::RWLocking, 4);
 
-        run(Scheduler::WLocking, 2);
-        run(Scheduler::WLocking, 4);
-    }
-    cout << endl;
+    run(Scheduler::WLocking, 2);
+    run(Scheduler::WLocking, 4);
 }
 
-void TestRuntime::prepare(int newVarsCount, int msgCount) {
+void TestRuntime::prepare(int msgsCount, int newVarsCount, double newReadLambda, double newWriteLambda) {
     messages.clear();
+
     totalProcessingTime = 0;
     varsCount = newVarsCount;
+    readLambda = newReadLambda;
+    writeLambda = newWriteLambda;
 
-    for (int i = 0; i < msgCount; i++) {
-        auto msg = make_shared<TestMessage>(varsCount);
+    for (int i = 0; i < msgsCount; i++) {
+        auto msg = make_shared<TestMessage>(varsCount, readLambda, writeLambda);
         totalProcessingTime += msg->getProcessTime();
         messages.push_back(msg);
     }
@@ -144,14 +147,28 @@ void TestRuntime::run(Scheduler::Type type, int workers) {
     auto start = std::chrono::high_resolution_clock::now();
     {
         scheduler.start();
-        for (auto msg : messages) scheduler.schedule(msg);
+        for (auto msg : messages) {
+            scheduler.schedule(msg);
+
+            // we limit speed of messages - better mimic real world
+            this_thread::sleep_for(1ms);
+        }
         scheduler.stop(true);
     }
     auto end = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double, std::milli> elapsed = end - start;
-    cout << "================== " << (type == Scheduler::RWLocking ? "RW " : "W  ") << workers << " ====================" << endl;
+
+    stringstream lineStream;
+
+    lineStream << "========= ";
+    lineStream << messages.size() << "*(" << varsCount << ", " << readLambda << ", " << writeLambda << ") ";
+    lineStream << "on " << (type == Scheduler::RWLocking ? "RW" : "W") << "x";
+    lineStream << workers;
+    lineStream << " =========";
+
+    cout << lineStream.str() << endl;
     cout << "Computation took: " << elapsed.count() << " milliseconds" << endl;
     cout << "Total computation cost: " << totalProcessingTime << " milliseconds" << endl;
-    cout << "============================================" << endl;
+    cout << string(lineStream.str().size(), '=') << endl << endl;
 }
