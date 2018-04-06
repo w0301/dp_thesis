@@ -4,144 +4,126 @@
 
 using namespace std;
 
-BaseScheduler::BaseScheduler(std::shared_ptr<void> state, SchedulerType type, int workers_count, int vars_count) :
-        running(false), type(type), workersCount(workers_count), varsCount(vars_count),
-        workers(workers_count, new Worker(vars_count, mainMutex, mainCond)), state(state) {
-}
-
-BaseScheduler::~BaseScheduler() {
-    for (Worker *w : workers) delete w;
-    workers.clear();
-}
-
-void BaseScheduler::start() {
-    running = true;
-    mainThread = thread(&BaseScheduler::processMain, ref(*this));
-    for (Worker *w : workers)
-        w->start(std::bind(&BaseScheduler::processWorker, this, std::placeholders::_1, std::placeholders::_2));
-}
-
-void BaseScheduler::stop() {
-    for (Worker *w : workers) w->stop();
-
-    {
-        std::lock_guard<std::mutex> lock(mainMutex);
-        running = false;
+// SchedulerWorker
+bool SchedulerWorker::process(SchedulerWorkerMessage& msg) {
+    if (msg.getType() == SchedulerWorkerMessage::Process) {
+        scheduler.workerProcess(index, msg.getState(), msg.getMessage());
+        scheduler.workerRelease(index, msg.getState());
+        return true;
     }
-    mainCond.notify_one();
 
-    mainThread.join();
+    return false;
 }
 
-void BaseScheduler::schedule(std::shared_ptr<void> msg) {
-    {
-        std::lock_guard<std::mutex> lock(mainMutex);
-        queue.push_back(msg);
+void SchedulerWorker::clearVars() {
+    readVars.assign(varsCount, false);
+    writeVars.assign(varsCount, false);
+}
+
+void SchedulerWorker::setVars(const std::vector<bool>& newReadVars, const std::vector<bool>& newWriteVars) {
+    readVars.assign(newReadVars.begin(), newReadVars.end());
+    writeVars.assign(newWriteVars.begin(), newWriteVars.end());
+}
+
+// Scheduler
+Scheduler::Scheduler(std::shared_ptr<void> state, Type type, int workersCount, int varsCount) :
+        currState(state), type(type), varsCount(varsCount) {
+    for (int i = 0; i < workersCount; i++) {
+        workers.push_back(new SchedulerWorker(*this, i, varsCount));
     }
-    mainCond.notify_one();
 }
 
-void BaseScheduler::processMain() {
-    while (running) {
-        Worker *freeWorker = NULL;
-        std::shared_ptr<void> schedulableMsg;
+Scheduler::~Scheduler() {
+    for (auto worker : workers) delete worker;
+}
 
-        std::unique_lock<std::mutex> lock(mainMutex);
-        mainCond.wait(lock, [&] {
-            if (!running) return true;
+void Scheduler::start() {
+    Worker::start();
+    for (auto worker : workers) worker->start();
+}
 
-            freeWorker = getFreeWorker();
-            schedulableMsg = getSchedulableMessage();
+void Scheduler::stop(bool wait) {
+    send(SchedulerMessage(wait ? SchedulerMessage::LazyExit : SchedulerMessage::Exit, -1, shared_ptr<void>(), shared_ptr<void>()));
+    join();
 
-            return freeWorker || schedulableMsg;
-        });
-        if (!running) break;
+    for (auto worker : workers) worker->stop(wait);
+}
 
-        // consume Worker results
-        if (freeWorker && !freeWorker->isProcessConsumed()) {
-            auto workerState = freeWorker->consumeProcess();
-            state = mergeStates(state, workerState, freeWorker->getWriteVars());
+bool Scheduler::process(SchedulerMessage& msg) {
+    if (msg.getType() == SchedulerMessage::Process) {
+        auto worker = getAvailableWorker();
 
-            freeWorker->clearVars();
+        if (worker == NULL) {
+            // reschedule message again
+            schedule(msg.getMessage());
+
+            // TODO : wait for release or exit message here!
+
+            return true;
         }
 
-        // schedule message
-        if (schedulableMsg) {
-            // locking variables
-            auto vars = getMessageVars(schedulableMsg);
-            freeWorker->setVars(vars.first, vars.second);
-
-            // acquiring state
-            auto workerState = acquireState(state);
-
-            // and processing messsage after that
-            freeWorker->process(workerState, schedulableMsg);
-
-            // delete msg
-            for (auto it = queue.begin(); it != queue.end(); it++) {
-                if (schedulableMsg == *it) {
-                    queue.erase(it);
-                    break;
-                }
-            }
+        auto vars = getMessageVars(msg.getMessage());
+        if (isSchedulable(vars.first, vars.second)) {
+            worker->setAvailable(false);
+            worker->setVars(vars.first, vars.second);
+            worker->schedule(acquireState(currState), msg.getMessage());
         }
+        else {
+            // TODO : add special message type which cause scheduler wait for the release message!
+
+            schedule(msg.getMessage());
+        }
+
+        return true;
     }
+    else if (msg.getType() == SchedulerMessage::Release) {
+        auto worker = workers[msg.getSenderIndex()];
+
+        // merging state
+        currState = mergeStates(currState, msg.getState(), worker->getWriteVars());
+
+        // resetting worker
+        worker->clearVars();
+        worker->setAvailable(true);
+
+        return true;
+    }
+
+    return false;
 }
 
-Worker *BaseScheduler::getFreeWorker() {
+SchedulerWorker* Scheduler::getAvailableWorker() {
     for (auto worker : workers) {
-        if (!worker->isProcessing() && !worker->isProcessConsumed()) return worker;
-    }
-    for (auto worker : workers) {
-        if (!worker->isProcessing()) return worker;
+        if (worker->isAvailable()) return worker;
     }
     return NULL;
 }
 
-std::shared_ptr<void> BaseScheduler::getSchedulableMessage() {
-    for (auto msg : queue) {
-        if (isSchedulable(msg)) return msg;
-    }
-    return std::shared_ptr<void>();
-}
-
-bool BaseScheduler::isVarReadLocked(int var_index) {
-    for (int i = 0; i < workersCount; i++) {
-        if (workers[i]->isReading(var_index)) return true;
-    }
-    return false;
-}
-
-bool BaseScheduler::isVarWriteLocked(int var_index) {
-    for (int i = 0; i < workersCount; i++) {
-        if (workers[i]->isWriting(var_index)) return true;
-    }
-    return false;
-}
-
-bool BaseScheduler::isSchedulable(std::shared_ptr<void> msg) {
-    auto vars = getMessageVars(msg);
-    return isSchedulable(vars.first, vars.second);
-}
-
-bool BaseScheduler::isSchedulable(const std::vector<bool> &read_vars, const std::vector<bool> &write_vars) {
-    if (read_vars.size() != varsCount || write_vars.size() != varsCount) {
-        throw runtime_error("Incorrect number of variables in the input vectors.");
-    }
-
+bool Scheduler::isSchedulable(const std::vector<bool>& readVars, const std::vector<bool>& writeVars) {
     for (int i = 0; i < varsCount; i++) {
         bool locked = false;
-        bool need_locked = false;
+        bool needLocked = false;
 
-        if (type == SchedulerType::RWLocking) {
-            locked = isVarReadLocked(i) || isVarWriteLocked(i);
-            need_locked = read_vars[i] || write_vars[i];
-        } else if (type == SchedulerType::WLocking) {
-            locked = isVarWriteLocked(i);
-            need_locked = write_vars[i];
+        if (type == RWLocking) {
+            for (auto worker : workers) {
+                if (worker->getReadVars()[i] || worker->getWriteVars()[i]) {
+                    locked = true;
+                    break;
+                }
+            }
+            needLocked = readVars[i] || writeVars[i];
+        }
+        else if (type == WLocking) {
+            for (auto worker : workers) {
+                if (worker->getWriteVars()[i]) {
+                    locked = true;
+                    break;
+                }
+            }
+            needLocked = writeVars[i];
         }
 
-        if (locked && need_locked) return false;
+        if (locked && needLocked) return false;
     }
 
     return true;

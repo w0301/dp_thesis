@@ -17,8 +17,8 @@ target_include_directories(interpreter PRIVATE
 )
 
 target_sources(interpreter PRIVATE
+        "src/Queue.h"
         "src/Worker.h"
-        "src/Worker.cpp"
         "src/Scheduler.h"
         "src/Scheduler.cpp"
         "src/Runtime.h"

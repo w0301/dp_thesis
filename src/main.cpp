@@ -5,6 +5,8 @@
 using namespace std;
 
 int main() {
-  cout << "Hello!" << endl;
+  TestRuntime tests;
+  tests.run();
+
   return 0;
 }

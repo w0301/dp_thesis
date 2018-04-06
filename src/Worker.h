@@ -1,74 +1,50 @@
 #ifndef WORKER_H
 #define WORKER_H
 
-#include <mutex>
-#include <vector>
+#include <atomic>
 #include <thread>
-#include <memory>
-#include <utility>
-#include <functional>
-#include <condition_variable>
 
-class Worker {
-    public:
-        Worker(int, std::mutex&, std::condition_variable&);
+#include "Queue.h"
 
-        void start(const std::function<void(std::shared_ptr<void>, std::shared_ptr<void>)>&);
-        void stop();
+template <typename T> class Worker {
+public:
+    bool isWaiting() const {
+        return waiting;
+    }
 
-        bool isRunning() const {
-            return running;
-        }
+    virtual void start() {
+        thread = std::thread([&] {
+            while (true) {
+                waiting = true;
 
-        bool isProcessing() const {
-            return processing;
-        }
+                T msg = queue.pop();
 
-        bool isProcessConsumed() const {
-            return processConsumed;
-        }
+                waiting = false;
 
-        bool isReading(int index) const {
-            return readVars[index];
-        }
+                if (!process(msg)) break;
+            }
+        });
+    }
 
-        bool isWriting(int index) const {
-            return writeVars[index];
-        }
+    void join() {
+        thread.join();
+    }
 
-        const std::vector<bool>& getReadVars() const {
-            return readVars;
-        }
+    void send(const T& msg) {
+        queue.push(msg);
+    }
 
-        const std::vector<bool>& getWriteVars() const {
-            return writeVars;
-        }
+    void send(T&& msg) {
+        queue.push(msg);
+    }
 
-        void clearVars();
-        void setVars(const std::vector<bool>&, const std::vector<bool> &);
+protected:
+    virtual bool process(T& msg) = 0;
 
-        void process(std::shared_ptr<void>, std::shared_ptr<void>);
-        std::shared_ptr<void> consumeProcess();
-
-    private:
-        void workerMethod(const std::function<void(std::shared_ptr<void>, std::shared_ptr<void>)>&);
-
-        std::mutex& schedulerMutex;
-        std::condition_variable& schedulerCond;
-
-        int varsCount;
-        std::vector<bool> readVars;
-        std::vector<bool> writeVars;
-
-        volatile bool running = false;
-        std::mutex workerMutex;
-        std::thread workerThread;
-        std::condition_variable workerCond;
-
-        volatile bool processing = false;
-        volatile bool processConsumed = false;
-        std::shared_ptr<void> workerState;
-        std::shared_ptr<void> workerMessage;
+private:
+    Queue<T> queue;
+    std::thread thread;
+    std::atomic<bool> waiting;
 };
 
 #endif
