@@ -2,29 +2,69 @@
 #include <memory>
 #include <thread>
 #include <chrono>
+#include <random>
 #include <cstdlib>
 #include <iostream>
+#include <functional>
 
 #include "TestRuntime.h"
 
 using namespace std;
 
-
-
 // Message
-TestMessage::TestMessage(int varsCount) {
-    int readCount = 0;
-    int writeCount = 0;
+int probGenerate(vector<bool>& res, const function<double(int)>& probFunc) {
+    int varsCount = (int)res.size();
 
-    for (int i = 0; i < varsCount; i++) {
-        readVars.push_back((bool)(rand() % 2));
-        if (readVars[i]) readCount += 1;
-
-        writeVars.push_back((bool)(rand() % 2));
-        if (writeVars[i]) writeCount += 1;
+    // building roulette count of variables
+    double rouletteSum = 0;
+    vector<double> roulette;
+    for (int i = 0; i <= varsCount; i++) {
+        double prob = probFunc(i);
+        rouletteSum += prob;
+        roulette.push_back(prob);
     }
 
-    processTime = readCount * 2 + writeCount * 3;
+    // normalizing roulette
+    for (int i = 0; i <= varsCount; i++) {
+        roulette[i] = roulette[i] / rouletteSum;
+    }
+
+    // using roulette
+    int count = 0;
+    double sum = 0;
+    double randVal = rand() / (double)RAND_MAX;
+    for ( ; count <= varsCount; count++) {
+        sum += roulette[count];
+        if (randVal < sum) break;
+    }
+
+    // distributing randomly
+    for (int i = 0; i < count; i++) {
+        int index = 0;
+        do {
+            index = rand() % varsCount;
+        }
+        while (res[index]);
+        res[index] = true;
+    }
+
+    return count;
+}
+
+TestMessage::TestMessage(int varsCount) :
+        readVars(varsCount, false), writeVars(varsCount, false) {
+    double lambda = 2;
+
+    int readsCount = probGenerate(readVars, [&](int c) {
+        return exp(-1.0 * lambda * ((double)c / (double)varsCount));
+    });
+
+    int writesCount = probGenerate(writeVars, [&](int c) {
+        return exp(-1.0 * lambda * ((double)c / (double)varsCount));
+    });
+
+    // set process time based on message impact
+    processTime = max(readsCount, 1) * 2 + max(writesCount, 1) * 4;
 }
 
 // Scheduler
@@ -34,7 +74,6 @@ TestScheduler::TestScheduler(Scheduler::Type type, int workersCount, int varsCou
 
 void TestScheduler::workerProcess(int index, shared_ptr<void> state, shared_ptr<void> msg) {
     int time = static_pointer_cast<TestMessage>(msg)->getProcessTime();
-    cout << "Processing for " << time << " milliseconds on " << index << endl;
 
     // doing busy wait to better simulate processing!
     auto start = std::chrono::high_resolution_clock::now();
@@ -61,28 +100,58 @@ std::pair< std::vector<bool>, std::vector<bool> > TestScheduler::getMessageVars(
 }
 
 // Runtime
-void TestRuntime::run() {
-    int workers = 2, vars = 10;
+void TestRuntime::runTests() {
+    prepare(2, 1000);
+    runPreparedTests();
 
-    TestScheduler scheduler(Scheduler::WLocking, workers, vars);
+    prepare(5, 1000);
+    runPreparedTests();
+
+    prepare(10, 1000);
+    runPreparedTests();
+}
+
+void TestRuntime::runPreparedTests() {
+    cout << varsCount << " vars and " << messages.size() << " messages:" << endl;
+    {
+        run(Scheduler::RWLocking, 1);
+
+        run(Scheduler::RWLocking, 2);
+        run(Scheduler::RWLocking, 4);
+
+        run(Scheduler::WLocking, 2);
+        run(Scheduler::WLocking, 4);
+    }
+    cout << endl;
+}
+
+void TestRuntime::prepare(int newVarsCount, int msgCount) {
+    messages.clear();
+    totalProcessingTime = 0;
+    varsCount = newVarsCount;
+
+    for (int i = 0; i < msgCount; i++) {
+        auto msg = make_shared<TestMessage>(varsCount);
+        totalProcessingTime += msg->getProcessTime();
+        messages.push_back(msg);
+    }
+}
+
+
+void TestRuntime::run(Scheduler::Type type, int workers) {
+    TestScheduler scheduler(type, workers, varsCount);
 
     auto start = std::chrono::high_resolution_clock::now();
-
-    scheduler.start();
-
-    int totalProcessTime = 0;
-    for (int i = 0; i < 500; i++) {
-        auto msg = make_shared<TestMessage>(vars);
-        totalProcessTime += msg->getProcessTime();
-
-        scheduler.schedule(msg);
+    {
+        scheduler.start();
+        for (auto msg : messages) scheduler.schedule(msg);
+        scheduler.stop(true);
     }
-
-    scheduler.stop(true);
-
     auto end = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double, std::milli> elapsed = end - start;
+    cout << "================== " << (type == Scheduler::RWLocking ? "RW " : "W  ") << workers << " ====================" << endl;
     cout << "Computation took: " << elapsed.count() << " milliseconds" << endl;
-    cout << "Expected computation time: " << totalProcessTime << " milliseconds" << endl;
+    cout << "Total computation cost: " << totalProcessingTime << " milliseconds" << endl;
+    cout << "============================================" << endl;
 }

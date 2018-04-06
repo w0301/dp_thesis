@@ -2,6 +2,7 @@
 #define TEST_RUNTIME_H
 
 #include <vector>
+#include <memory>
 
 #include "Scheduler.h"
 
@@ -41,8 +42,17 @@ protected:
 
 class TestRuntime {
 public:
-    void run();
+    void runTests();
 
+    void prepare(int, int);
+    void run(Scheduler::Type, int);
+
+private:
+    void runPreparedTests();
+
+    int varsCount;
+    int totalProcessingTime;
+    std::vector<std::shared_ptr<TestMessage> > messages;
 };
 
 #endif

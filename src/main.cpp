@@ -5,8 +5,7 @@
 using namespace std;
 
 int main() {
-  TestRuntime tests;
-  tests.run();
+  TestRuntime().runTests();
 
   return 0;
 }

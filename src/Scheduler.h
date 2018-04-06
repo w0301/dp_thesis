@@ -92,7 +92,8 @@ private:
 class SchedulerMessage {
 public:
     enum Type {
-        Exit = 1000, Release = 100, Process = 10, Reprocess = 5, LazyExit = 1
+        // NOTE : Process should have higher priority than Reprocess - experiments!
+        Exit = 1000, Release = 100, Reprocess = 10, Process = 15, LazyExit = 1
     };
 
     SchedulerMessage(Type type, int index, std::shared_ptr<void> state, std::shared_ptr<void> message) :
