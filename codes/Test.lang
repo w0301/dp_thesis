@@ -1,0 +1,25 @@
+
+
+if local.test:
+    local.a1 = 10
+    local.a2 = fp(10, 10)
+end
+
+if local.test
+    local.a1 = 10
+    local.a2 = fp(10, 10)
+else
+    local.a1 = 11
+    local.a2 = fp(10, 102)
+end
+
+
+if local.test
+    local.a1 = 10
+    local.a2 = fp(10, 10)
+else
+    if local.test2
+        local.a1 = 11
+        local.a2 = fp(10, 102)
+    end
+end
