@@ -71,7 +71,7 @@ bool Scheduler::process(SchedulerMessage& msg) {
         if (isSchedulable(vars.first, vars.second)) {
             worker->setAvailable(false);
             worker->setVars(vars.first, vars.second);
-            worker->schedule(acquireState(currState), msg.getMessage());
+            worker->schedule(currState, msg.getMessage());
         }
         else {
             // reschedule not-processed message
@@ -83,8 +83,8 @@ bool Scheduler::process(SchedulerMessage& msg) {
     else if (msg.getType() == SchedulerMessage::Release) {
         auto worker = workers[msg.getSenderIndex()];
 
-        // merging state
-        currState = mergeStates(currState, msg.getState(), worker->getWriteVars());
+        // updating read-only copy of the state (if it is not needed implementation will do nothing)
+        updateReadonlyState(currState, worker->getWriteVars());
 
         // resetting worker
         worker->clearVars();

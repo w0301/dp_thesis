@@ -85,12 +85,8 @@ void TestScheduler::workerProcess(int index, shared_ptr<void> state, shared_ptr<
     }
 }
 
-std::shared_ptr<void> TestScheduler::acquireState(std::shared_ptr<void> state) {
-    return state;
-}
-
-std::shared_ptr<void> TestScheduler::mergeStates(std::shared_ptr<void>, std::shared_ptr<void> workerState, const std::vector<bool>&) {
-    return workerState;
+void TestScheduler::updateReadonlyState(std::shared_ptr<void>, const std::vector<bool> &) {
+    // nothing is needed here, because we have no state
 }
 
 std::pair< std::vector<bool>, std::vector<bool> > TestScheduler::getMessageVars(std::shared_ptr<void> msg) {

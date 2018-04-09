@@ -164,9 +164,7 @@ protected:
     }
 
     virtual void workerProcess(int, std::shared_ptr<void>, std::shared_ptr<void>) = 0;
-
-    virtual std::shared_ptr<void> acquireState(std::shared_ptr<void> g) = 0;
-    virtual std::shared_ptr<void> mergeStates(std::shared_ptr<void>, std::shared_ptr<void>, const std::vector<bool> &) = 0;
+    virtual void updateReadonlyState(std::shared_ptr<void>, const std::vector<bool> &) = 0;
 
     virtual std::pair<std::vector<bool>, std::vector<bool> > getMessageVars(std::shared_ptr<void>) = 0;
 

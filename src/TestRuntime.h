@@ -34,9 +34,8 @@ public:
 
 protected:
     void workerProcess(int i, std::shared_ptr<void> ptr, std::shared_ptr<void> shared_ptr) override;
+    void updateReadonlyState(std::shared_ptr<void>, const std::vector<bool> &) override;
 
-    std::shared_ptr<void> acquireState(std::shared_ptr<void> g) override;
-    std::shared_ptr<void> mergeStates(std::shared_ptr<void>, std::shared_ptr<void>, const std::vector<bool> &) override;
     std::pair<std::vector<bool>, std::vector<bool> > getMessageVars(std::shared_ptr<void>) override;
 };
 
