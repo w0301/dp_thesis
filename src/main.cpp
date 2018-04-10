@@ -1,11 +1,22 @@
 #include <iostream>
 
+#include "Runtime.h"
 #include "TestRuntime.h"
 
 using namespace std;
 
-int main() {
+void runSchedulerTest() {
   TestRuntime().runTests();
+}
 
-  return 0;
+void runInterpreterTest() {
+    Runtime runtime("../codes/Test.lang");
+}
+
+int main() {
+    //runSchedulerTest();
+
+    runInterpreterTest();
+
+    return 0;
 }

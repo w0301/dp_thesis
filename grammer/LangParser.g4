@@ -32,16 +32,12 @@ constantValue
   | stringValue
   ;
 
-identifierPath
-  : OBJ_PATH
-  ;
-
 globalIdentifier
-  : GLOBAL DOT identifierPath
+  : GLOBAL_OBJ_PATH
   ;
 
 localIdentifier
-  : LOCAL DOT identifierPath
+  : LOCAL_OBJ_PATH
   ;
 
 identifier

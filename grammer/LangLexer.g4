@@ -1,18 +1,14 @@
 lexer grammar LangLexer;
 
-fragment WHITESPACE
-  : [ \t]+
-  ;
-
 INTEGER
   : [1-9] [0-9]*
   | [0]
-  | WHITESPACE [\-] [1-9] [0-9]*
+  | [\-] [1-9] [0-9]*
   ;
 
 FLOAT
   : [0-9]+ '.' [0-9]+
-  | WHITESPACE [\-] [0-9]+ '.' [0-9]+
+  | [\-] [0-9]+ '.' [0-9]+
   ;
 
 BOOL
@@ -31,20 +27,12 @@ OBJ
   : 'null'
   ;
 
-NAME
-  :  [a-zA-Z] [a-zA-Z0-9]*
+EQ
+  : '='
   ;
 
 DOT
   : '.'
-  ;
-
-OBJ_PATH
-  : NAME (DOT NAME)*
-  ;
-
-EQ
-  : '='
   ;
 
 COMMA
@@ -61,14 +49,6 @@ L_PAREN
 
 R_PAREN
   : ')'
-  ;
-
-GLOBAL
-  : 'global'
-  ;
-
-LOCAL
-  : 'local'
   ;
 
 DEF
@@ -91,6 +71,20 @@ END
   : 'end'
   ;
 
+// identifier tokens comes last!
+NAME
+  :  [a-zA-Z] [a-zA-Z0-9]*
+  ;
+
+GLOBAL_OBJ_PATH
+  : 'global' (DOT NAME)*
+  ;
+
+LOCAL_OBJ_PATH
+  : 'local' (DOT NAME)*
+  ;
+
+// skipping whitespaces
 WHITESPACE_SKIP
-  : [\r\n \t] -> channel(HIDDEN)
+  : [ \t\r\n]+ -> channel(HIDDEN)
   ;
