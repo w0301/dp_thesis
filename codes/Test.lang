@@ -1,8 +1,22 @@
 
-def main()
-    local.a = "text"
-    local.a = 10
-    local.a = true
-    local.a = 10.0
-    local.a = 'c'
+def main(msg)
+    local.a = foo("text")
+
+    if local.a
+        local.a = bar(10, global.a)
+    else if local.b
+        local.a = true
+    end
+
+    if local.a
+        local.a = 10.0
+    else
+        local.a = 'c'
+    end
+
+    if local.a
+        local.a = null
+    end
+
+    return local.a
 end

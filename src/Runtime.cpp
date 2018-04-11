@@ -68,7 +68,7 @@ public:
             if (ctx->conditionStatement()->statement()) {
                 cond->addElseStatement(visitStatement(ctx->conditionStatement()->statement()));
             }
-            else {
+            else if (ctx->conditionStatement()->elseStatements()) {
                 for (auto stat : ctx->conditionStatement()->elseStatements()->statement()) {
                     cond->addElseStatement(visitStatement(stat));
                 }
@@ -130,6 +130,9 @@ public:
             val->setValue(str.substr(1, str.length() - 2));
 
             return dynamic_pointer_cast<ConstantValue>(val);
+        }
+        else if (ctx->objValue()) {
+            return dynamic_pointer_cast<ConstantValue>(make_shared<NullValue>());
         }
 
         return NULL;

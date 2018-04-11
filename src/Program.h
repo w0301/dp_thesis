@@ -71,6 +71,10 @@ class CharValue : public ConstantTemplateValue<char32_t > {
 class StringValue : public ConstantTemplateValue<std::u32string> {
 };
 
+class NullValue : public ConstantValue
+{
+};
+
 class IdentifierValue : public Value {
 public:
     std::shared_ptr<Identifier> getIdentifier() const {

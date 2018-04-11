@@ -24,12 +24,17 @@ stringValue
   : STRING
   ;
 
+objValue
+  : OBJ
+  ;
+
 constantValue
   : integerValue
   | floatValue
   | boolValue
   | charValue
   | stringValue
+  | objValue
   ;
 
 globalIdentifier
