@@ -45,6 +45,11 @@ identifier
   | globalIdentifier
   ;
 
+value
+  : constantValue
+  | identifier
+  ;
+
 functionName
   : NAME
   ;
@@ -54,8 +59,7 @@ functionArgName
   ;
 
 functionArg
-  : identifier
-  | constantValue
+  : value
   ;
 
 functionCall
@@ -68,19 +72,27 @@ assignmentStatement
   ;
 
 conditionStatement
-  : IF identifier statements END
-  | IF identifier statements ELSE statement
-  | IF identifier statements ELSE statements END
+  : IF identifier thenStatements END
+  | IF identifier thenStatements ELSE statement
+  | IF identifier thenStatements ELSE elseStatements END
   ;
 
 returnStatement
-  : RETURN identifier
+  : RETURN value
   ;
 
 statement
   : assignmentStatement
   | conditionStatement
   | returnStatement
+  ;
+
+thenStatements
+  : statement+
+  ;
+
+elseStatements
+  : statement+
   ;
 
 statements

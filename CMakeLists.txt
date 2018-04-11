@@ -27,11 +27,12 @@ include_directories(${antlr4cpp_include_dirs_antlr} "src/")
 # main executable definition
 add_executable(interpreter
         ${antlr4cpp_src_files_antlr}
-        "src/Scheduler.cpp"
-        "src/Runtime.cpp"
-        "src/TestRuntime.cpp"
-        "src/main.cpp"
-        )
+        "src/Scheduler.h" "src/Scheduler.cpp"
+        "src/Runtime.h" "src/Runtime.cpp"
+        "src/TestRuntime.h" "src/TestRuntime.cpp"
+        "src/ProgramExecutor.cpp" "src/ProgramExecutor.h"
+        "src/Queue.h" "src/Worker.h" "src/Program.h"
+        "src/main.cpp")
 
 add_dependencies(interpreter antlr4cpp antlr4cpp_generation_antlr)
 
