@@ -72,7 +72,7 @@ functionCall
   ;
 
 assignmentStatement
-  : identifier EQ constantValue
+  : identifier EQ value
   | identifier EQ functionCall
   ;
 

@@ -34,18 +34,25 @@ public:
 
     antlrcpp::Any visitStatement(LangParser::StatementContext *ctx) override {
         if (ctx->assignmentStatement()) {
-            if (ctx->assignmentStatement()->constantValue()) {
-                auto assignment = make_shared<ConstantAssignment>();
-                assignment->setTarget(visitIdentifier(ctx->assignmentStatement()->identifier()));
-                assignment->setValue(visitConstantValue(ctx->assignmentStatement()->constantValue()));
-                return dynamic_pointer_cast<Statement>(assignment);
-            }
-            else if (ctx->assignmentStatement()->functionCall()) {
+            if (ctx->assignmentStatement()->functionCall()) {
                 auto assignment = make_shared<CallAssignment>();
                 assignment->setTarget(visitIdentifier(ctx->assignmentStatement()->identifier()));
+                assignment->setFunctionName(ctx->assignmentStatement()->functionCall()->functionName()->getText());
                 for (auto arg : ctx->assignmentStatement()->functionCall()->functionArg()) {
                     assignment->addFunctionArg(visitValue(arg->value()));
                 }
+                return dynamic_pointer_cast<Statement>(assignment);
+            }
+            else if (ctx->assignmentStatement()->value()->constantValue()) {
+                auto assignment = make_shared<ConstantAssignment>();
+                assignment->setTarget(visitIdentifier(ctx->assignmentStatement()->identifier()));
+                assignment->setValue(visitConstantValue(ctx->assignmentStatement()->value()->constantValue()));
+                return dynamic_pointer_cast<Statement>(assignment);
+            }
+            else if (ctx->assignmentStatement()->value()->identifier()) {
+                auto assignment = make_shared<IdentifierAssignment>();
+                assignment->setTarget(visitIdentifier(ctx->assignmentStatement()->identifier()));
+                assignment->setValue(dynamic_pointer_cast<IdentifierValue, Value>(visitValue(ctx->assignmentStatement()->value())));
                 return dynamic_pointer_cast<Statement>(assignment);
             }
         }
@@ -158,14 +165,4 @@ Runtime::Runtime(const char *file) {
     // creating AST
     ParserVisitor visitor;
     program = visitor.visitFile(parser.file());
-
-    // printing some debug data
-    tokens.reset();
-    tree::ParseTree* tree = parser.file();
-    cout << tree->toStringTree(&parser) << endl;
-
-    cout << "Parsed functions: " << endl;
-    for (auto func : program->getFunctions()) {
-        cout << func->getName() << endl;
-    }
 }

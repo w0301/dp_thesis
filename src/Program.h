@@ -37,6 +37,8 @@ private:
 };
 
 class Value {
+public:
+    virtual ~Value() = default;
 };
 
 class ConstantValue : public Value {
@@ -90,7 +92,8 @@ private:
 };
 
 class Statement {
-
+public:
+    virtual ~Statement() = default;
 };
 
 class Assignment : public Statement {
@@ -128,6 +131,20 @@ public:
 private:
     std::string functionName;
     std::vector<std::shared_ptr<Value> > functionArgs;
+};
+
+class IdentifierAssignment : public Assignment {
+public:
+    std::shared_ptr<IdentifierValue> getValue() const {
+        return value;
+    }
+
+    void setValue(std::shared_ptr<IdentifierValue> value)  {
+        this->value = value;
+    }
+
+private:
+    std::shared_ptr<IdentifierValue> value;
 };
 
 class ConstantAssignment : public Assignment {
@@ -192,7 +209,7 @@ private:
 
 class Function {
 public:
-    Function(const std::string& name) : name(name) {
+    explicit Function(const std::string& name) : name(name) {
     }
 
     const std::string& getName() const {
