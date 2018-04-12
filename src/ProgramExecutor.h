@@ -6,6 +6,7 @@
 #include <memory>
 #include <locale>
 #include <codecvt>
+#include <functional>
 
 #include "Program.h"
 
@@ -54,6 +55,9 @@ public:
 
 template<class T> class ExecPrimitiveTemplate : public ExecPrimitive {
 public:
+    ExecPrimitiveTemplate() = default;
+    explicit ExecPrimitiveTemplate(const T& val) : value(val) { };
+
     const T& getValue() const {
         return value;
     }
@@ -68,6 +72,9 @@ private:
 
 class ExecBoolean : public ExecPrimitiveTemplate<bool> {
 public:
+    ExecBoolean() = default;
+    explicit ExecBoolean(bool val) : ExecPrimitiveTemplate(val) { };
+
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecBoolean>();
         res->setValue(getValue());
@@ -81,6 +88,9 @@ public:
 
 class ExecInteger : public ExecPrimitiveTemplate<long long> {
 public:
+    ExecInteger() = default;
+    explicit ExecInteger(long long val) : ExecPrimitiveTemplate(val) { };
+
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecInteger>();
         res->setValue(getValue());
@@ -94,6 +104,9 @@ public:
 
 class ExecFloat : public ExecPrimitiveTemplate<double> {
 public:
+    ExecFloat() = default;
+    explicit ExecFloat(double val) : ExecPrimitiveTemplate(val) { };
+
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecFloat>();
         res->setValue(getValue());
@@ -107,6 +120,9 @@ public:
 
 class ExecChar : public ExecPrimitiveTemplate<char32_t > {
 public:
+    ExecChar() = default;
+    explicit ExecChar(char32_t val) : ExecPrimitiveTemplate(val) { };
+
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecChar>();
         res->setValue(getValue());
@@ -123,6 +139,9 @@ private:
 
 class ExecString : public ExecPrimitiveTemplate<std::u32string> {
 public:
+    ExecString() = default;
+    explicit ExecString(const std::u32string& val) : ExecPrimitiveTemplate(val) { };
+
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecString>();
         res->setValue(getValue());
@@ -140,8 +159,7 @@ private:
 // Executor
 class ProgramExecutor {
 public:
-    ProgramExecutor(std::shared_ptr<Program> program) :
-            program(std::move(program)), global(std::make_shared<ExecObject>()) { }
+    explicit ProgramExecutor(std::shared_ptr<Program> program);
 
     std::shared_ptr<ExecValue> exec(std::shared_ptr<ExecValue>);
 
@@ -152,7 +170,6 @@ private:
 
     std::shared_ptr<Program> program;
     std::shared_ptr<ExecObject> global;
-
 };
 
 #endif

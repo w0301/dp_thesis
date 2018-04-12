@@ -1,6 +1,7 @@
-#include "ProgramExecutor.h"
-
 #include <stdexcept>
+
+#include "ProgramExecutor.h"
+#include "BuiltInFunction.h"
 
 using namespace std;
 
@@ -95,6 +96,11 @@ string ExecObject::toString() const {
 }
 
 // Executor
+ProgramExecutor::ProgramExecutor(shared_ptr<Program> program) :
+        program(move(program)), global(make_shared<ExecObject>()) {
+    initBuiltInFunctions();
+}
+
 shared_ptr<ExecValue> ProgramExecutor::exec(shared_ptr<ExecValue> arg) {
     auto mainFunction = program->getFunction("main");
     if (!mainFunction) throw logic_error("No function with name 'main' defined.");
@@ -167,8 +173,14 @@ shared_ptr<ExecValue> ProgramExecutor::execStatement(shared_ptr<Statement> state
             }
             value = execFunction(function, funcLocal);
         }
+        else if (BUILT_IN_FUNCTIONS[assign->getFunctionName()].isDefined()) {
+            vector<shared_ptr<ExecValue> > args;
+            for (int i = 0; i < assign->getFunctionArgs().size(); i++) {
+                args.push_back(execValue(assign->getFunctionArgs()[i], local));
+            }
+            value = BUILT_IN_FUNCTIONS[assign->getFunctionName()](BuiltInArguments(args));
+        }
         else {
-            // TODO : run built-in function here before throwing error
             throw logic_error("Function with the name '" + assign->getFunctionName() + "' does not exist.");
         }
 
