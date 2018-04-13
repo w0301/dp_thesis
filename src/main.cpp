@@ -25,9 +25,9 @@ void runInterpreterTest() {
 }
 
 int main() {
-    //runSchedulerTest();
+    runSchedulerTest();
 
-    runInterpreterTest();
+    //runInterpreterTest();
 
     return 0;
 }

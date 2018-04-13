@@ -57,6 +57,8 @@ void ExecObject::setFieldByPath(const string& path, shared_ptr<ExecValue> val) {
     // we do store special null values!
     if (dynamic_pointer_cast<ExecNull>(val)) val = shared_ptr<ExecValue>();
 
+    // TODO : ensure needed sub-paths in the val here!!!
+
     size_t dotPos = path.find('.');
     if (dotPos == string::npos) {
         fields[path] = val;

@@ -14,58 +14,52 @@
 using namespace std;
 
 // Message
-int probGenerate(vector<bool>& res, const function<double(int)>& probFunc) {
-    int varsCount = (int)res.size();
+std::random_device randomDevice{};
+std::mt19937 randomEngine{randomDevice()};
+
+int probGenerate(vector<bool>& reads, vector<bool>& writes, normal_distribution<double> distribution) {
+    int varsCount = (int)reads.size();
     if (varsCount == 0) return 0;
 
     // building roulette count of variables
-    double rouletteSum = 0;
-    vector<double> roulette;
-    for (int i = 0; i <= varsCount; i++) {
-        double prob = probFunc(i);
-        rouletteSum += prob;
-        roulette.push_back(prob);
-    }
-
-    // normalizing roulette
-    for (int i = 0; i <= varsCount; i++) {
-        roulette[i] = roulette[i] / rouletteSum;
-    }
-
-    // using roulette
-    int count = 0;
-    double sum = 0;
-    double randVal = rand() / (double)RAND_MAX;
-    for ( ; count <= varsCount; count++) {
-        sum += roulette[count];
-        if (randVal < sum) break;
-    }
+    double randVal = distribution(randomEngine);
+    int count = max(0, min(2 * varsCount, (int)round(randVal)));
 
     // distributing randomly
+    uniform_int_distribution<> uniDistribution(0, varsCount * 2);
     for (int i = 0; i < count; i++) {
-        int index = 0;
-        do {
-            index = rand() % varsCount;
+        while (true) {
+            int index = uniDistribution(randomEngine);
+            if (index >= varsCount) {
+                index -= varsCount;
+                if (!writes[index]) {
+                    writes[index] = true;
+                    break;
+                }
+            }
+            else {
+                if (!reads[index]) {
+                    reads[index] = true;
+                    break;
+                }
+            }
         }
-        while (res[index]);
-        res[index] = true;
     }
 
     return count;
 }
 
-TestMessage::TestMessage(int varsCount, double readLambda, double writeLambda) :
-        readVars(varsCount, false), writeVars(varsCount, false) {
-    int readsCount = probGenerate(readVars, [&](int c) {
-        return exp(-1.0 * readLambda * ((double)c / (double)varsCount));
-    });
+TestMessage::TestMessage(int varsCount, double param) : readVars(varsCount, false), writeVars(varsCount, false) {
+    probGenerate(readVars, writeVars, normal_distribution<double>(varsCount / 2.0, sqrt(varsCount) / param));
 
-    int writesCount = probGenerate(writeVars, [&](int c) {
-        return exp(-1.0 * writeLambda * ((double)c / (double)varsCount));
-    });
+    readVarsCount = 0;
+    for (bool val : readVars) readVarsCount += val;
+
+    writeVarsCount = 0;
+    for (bool val : writeVars) writeVarsCount += val;
 
     // set process time based on message impact
-    processTime = max(readsCount, 1) * 2 + max(writesCount, 1) * 4;
+    processTime = max(readVarsCount, 1) * 2 + max(writeVarsCount, 1) * 4;
 }
 
 // Scheduler
@@ -98,46 +92,61 @@ std::pair< std::vector<bool>, std::vector<bool> > TestScheduler::getMessageVars(
 
 // Runtime
 void TestRuntime::runTests() {
-    prepare(1000, 0, 2.0, 4.0);
+    int count = 10000;
+    double param = 1.0;
+
+    prepare(count, 0, param);
     runPreparedTests();
 
-    prepare(1000, 5, 2.0, 4.0);
+    prepare(count, 5, param);
     runPreparedTests();
 
-    prepare(1000, 10, 2.0, 4.0);
+    prepare(count, 10, param);
     runPreparedTests();
 
-    prepare(1000, 20, 2.0, 4.0);
+    prepare(count, 20, param);
     runPreparedTests();
 }
 
 void TestRuntime::runPreparedTests() {
-    run(Scheduler::RWLocking, 1);
+    double ref = run(Scheduler::RWLocking, 1, -1);
 
-    run(Scheduler::RWLocking, 2);
-    run(Scheduler::RWLocking, 4);
+    run(Scheduler::RWLocking, 2, ref);
+    run(Scheduler::RWLocking, 4, ref);
 
-    run(Scheduler::WLocking, 2);
-    run(Scheduler::WLocking, 4);
+    run(Scheduler::WLocking, 2, ref);
+    run(Scheduler::WLocking, 4, ref);
 }
 
-void TestRuntime::prepare(int msgsCount, int newVarsCount, double newReadLambda, double newWriteLambda) {
+void TestRuntime::prepare(int msgsCount, int newVarsCount, double param) {
     messages.clear();
 
     totalProcessingTime = 0;
     varsCount = newVarsCount;
-    readLambda = newReadLambda;
-    writeLambda = newWriteLambda;
+    generationParam = param;
 
+    int totalReadsCount = 0;
+    int totalWritesCount = 0;
     for (int i = 0; i < msgsCount; i++) {
-        auto msg = make_shared<TestMessage>(varsCount, readLambda, writeLambda);
+        auto msg = make_shared<TestMessage>(varsCount, param);
+
+        totalReadsCount += msg->getReadVarsCount();
+        totalWritesCount += msg->getWriteVarsCount();
         totalProcessingTime += msg->getProcessTime();
+
         messages.push_back(msg);
+
     }
+
+    cout << "-----------------------------------" << endl;
+    cout << "Generated " << msgsCount << " messages." << endl;
+    cout << "Avg. reads count " << totalReadsCount / (double)msgsCount << " per message." << endl;
+    cout << "Avg. writes count " << totalWritesCount / (double)msgsCount << " per message." << endl;
+    cout << "-----------------------------------" << endl << endl;
 }
 
 
-void TestRuntime::run(Scheduler::Type type, int workers) {
+double TestRuntime::run(Scheduler::Type type, int workers, double refTime) {
     TestScheduler scheduler(type, workers, varsCount);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -158,7 +167,7 @@ void TestRuntime::run(Scheduler::Type type, int workers) {
     stringstream lineStream;
 
     lineStream << "========= ";
-    lineStream << messages.size() << "*(" << varsCount << ", " << readLambda << ", " << writeLambda << ") ";
+    lineStream << messages.size() << "*(" << varsCount << ", " << generationParam << ") ";
     lineStream << "on " << (type == Scheduler::RWLocking ? "RW" : "W") << "x";
     lineStream << workers;
     lineStream << " =========";
@@ -166,5 +175,11 @@ void TestRuntime::run(Scheduler::Type type, int workers) {
     cout << lineStream.str() << endl;
     cout << "Computation took: " << elapsed.count() << " milliseconds" << endl;
     cout << "Total computation cost: " << totalProcessingTime << " milliseconds" << endl;
+
+    double gain = (refTime - elapsed.count()) / refTime;
+    cout << "Performance gain: " << (refTime <= 0 ? 0.0 : gain * 100.0) << "%" << endl;
+
     cout << string(lineStream.str().size(), '=') << endl << endl;
+
+    return elapsed.count();
 }
