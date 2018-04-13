@@ -10,6 +10,10 @@ class Runtime {
 public:
     explicit Runtime(const char*);
 
+    std::shared_ptr<Program> getProgram() const {
+        return program;
+    }
+
     std::shared_ptr<ExecValue> exec(std::shared_ptr<ExecValue> arg) {
         return ProgramExecutor(program).exec(std::move(arg));
     }

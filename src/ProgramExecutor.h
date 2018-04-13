@@ -142,6 +142,10 @@ public:
     ExecString() = default;
     explicit ExecString(const std::u32string& val) : ExecPrimitiveTemplate(val) { };
 
+    void setValueUTF8(const std::string& value) {
+        setValue(utfConverter.from_bytes(value));
+    }
+
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecString>();
         res->setValue(getValue());

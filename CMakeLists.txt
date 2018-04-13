@@ -32,6 +32,10 @@ add_executable(interpreter
         "src/TestRuntime.h" "src/TestRuntime.cpp"
         "src/ProgramExecutor.cpp" "src/ProgramExecutor.h"
         "src/BuiltInFunction.cpp" "src/BuiltInFunction.h"
+        "src/SchedulerRuntime.cpp" "src/SchedulerRuntime.h"
+        "src/ProgramAnalyzer.cpp" "src/ProgramAnalyzer.h"
+        "src/ServerRuntime.cpp" "src/ServerRuntime.h"
+        "src/GuiRuntime.cpp" "src/GuiRuntime.h"
         "src/Queue.h" "src/Worker.h" "src/Program.h"
         "src/main.cpp")
 
