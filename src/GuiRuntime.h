@@ -1,9 +1,12 @@
 #ifndef GUI_RUNTIME_H
 #define GUI_RUNTIME_H
 
+#include "ProgramRuntime.h"
 
-class GuiRuntime {
-
+class GuiRuntime : public ProgramRuntime {
+public:
+    explicit GuiRuntime(const std::string& filePath, Scheduler::Type type, int workers) :
+            ProgramRuntime(filePath, type, workers) { }
 };
 
 

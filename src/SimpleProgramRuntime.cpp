@@ -168,4 +168,5 @@ shared_ptr<Program> parseFile(string filePath) {
 // SimpleProgramRuntime class
 SimpleProgramRuntime::SimpleProgramRuntime(string filePath) :
         ProgramExecutor(parseFile(filePath)), global(make_shared<ExecObject>()) {
+    // TODO : run analyzer for the program
 }

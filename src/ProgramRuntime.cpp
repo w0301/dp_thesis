@@ -3,9 +3,8 @@
 using namespace std;
 
 ProgramRuntime::ProgramRuntime(string filePath, Scheduler::Type type, int workers) :
-        SimpleProgramRuntime(filePath), Scheduler(type, workers, 0), readonlyGlobal(make_shared<ExecObject>()) {
-    // TODO : run analyzer here for the program
-
+        SimpleProgramRuntime(move(filePath)), Scheduler(type, workers, 0), readonlyGlobal(make_shared<ExecObject>()) {
+    // TODO : use real varsCount above (get from the analyzer in the SimpleProgramRuntime constructor)
 }
 
 void ProgramRuntime::workerProcess(int index, shared_ptr<void> msg) {

@@ -12,6 +12,8 @@ class ProgramRuntime : public SimpleProgramRuntime, public Scheduler {
 public:
     explicit ProgramRuntime(std::string, Scheduler::Type, int);
 
+    void run(int) { }
+
 protected:
     std::shared_ptr<ExecObject> getReadGlobal() const override {
         return getType() == RWLocking ? SimpleProgramRuntime::getReadGlobal() : std::atomic_load(&readonlyGlobal);

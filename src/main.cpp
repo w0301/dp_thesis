@@ -1,8 +1,10 @@
 #include <string>
 #include <iostream>
 
-#include "SimpleProgramRuntime.h"
+#include "GuiRuntime.h"
 #include "TestRuntime.h"
+#include "ServerRuntime.h"
+#include "SimpleProgramRuntime.h"
 
 using namespace std;
 
@@ -19,15 +21,15 @@ void runSchedulerTest(int msgsCount, int varsCount) {
 }
 
 void runServerTest() {
-    // TODO
+    ServerRuntime("codes/Server.lang", Scheduler::RWLocking, 4).run(100000);
 }
 
 void runGuiTest() {
-    // TODO
+    ServerRuntime("codes/Gui.lang", Scheduler::WLocking, 4).run(100000);
 }
 
-void runInterpreter(string programPath, string strArg) {
-    SimpleProgramRuntime runtime(programPath.c_str());
+void runInterpreter(const string& programPath, const string& strArg) {
+    SimpleProgramRuntime runtime(programPath);
 
     // setup arg for main
     auto arg = make_shared<ExecString>();
