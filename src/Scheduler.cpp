@@ -7,8 +7,8 @@ using namespace std;
 // SchedulerWorker
 bool SchedulerWorker::process(SchedulerWorkerMessage& msg) {
     if (msg.getType() == SchedulerWorkerMessage::Process) {
-        scheduler.workerProcess(index, msg.getState(), msg.getMessage());
-        scheduler.workerRelease(index, msg.getState());
+        scheduler.workerProcess(index, msg.getMessage());
+        scheduler.workerRelease(index);
         return true;
     }
 
@@ -26,8 +26,8 @@ void SchedulerWorker::setVars(const std::vector<bool>& newReadVars, const std::v
 }
 
 // Scheduler
-Scheduler::Scheduler(std::shared_ptr<void> state, Type type, int workersCount, int varsCount) :
-        currState(state), type(type), varsCount(varsCount) {
+Scheduler::Scheduler(Type type, int workersCount, int varsCount) :
+        type(type), varsCount(varsCount) {
     for (int i = 0; i < workersCount; i++) {
         workers.push_back(new SchedulerWorker(*this, i, varsCount));
     }
@@ -43,7 +43,7 @@ void Scheduler::start() {
 }
 
 void Scheduler::stop(bool wait) {
-    send(SchedulerMessage(wait ? SchedulerMessage::LazyExit : SchedulerMessage::Exit, -1, shared_ptr<void>(), shared_ptr<void>()));
+    send(SchedulerMessage(wait ? SchedulerMessage::LazyExit : SchedulerMessage::Exit, -1, shared_ptr<void>()));
     join();
 
     for (auto worker : workers) worker->stop(wait);
@@ -71,7 +71,7 @@ bool Scheduler::process(SchedulerMessage& msg) {
         if (isSchedulable(vars.first, vars.second)) {
             worker->setAvailable(false);
             worker->setVars(vars.first, vars.second);
-            worker->schedule(currState, msg.getMessage());
+            worker->schedule(msg.getMessage());
         }
         else {
             // reschedule not-processed message
@@ -84,7 +84,7 @@ bool Scheduler::process(SchedulerMessage& msg) {
         auto worker = workers[msg.getSenderIndex()];
 
         // updating read-only copy of the state (if it is not needed implementation will do nothing)
-        updateReadonlyState(currState, worker->getWriteVars());
+        updateReadonlyState(worker->getWriteVars());
 
         // resetting worker
         worker->clearVars();

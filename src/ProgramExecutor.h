@@ -167,13 +167,25 @@ public:
 
     std::shared_ptr<ExecValue> exec(std::shared_ptr<ExecValue>);
 
+    std::shared_ptr<Program> getProgram() {
+        return program;
+    }
+
+protected:
+    virtual std::shared_ptr<ExecObject> getReadGlobal() const = 0;
+    virtual std::shared_ptr<ExecObject> getWriteGlobal() const = 0;
+
 private:
-    std::shared_ptr<ExecValue> execFunction(std::shared_ptr<Function>, std::shared_ptr<ExecObject>);
-    std::shared_ptr<ExecValue> execStatement(std::shared_ptr<Statement>, std::shared_ptr<ExecObject>);
-    std::shared_ptr<ExecValue> execValue(std::shared_ptr<Value>, std::shared_ptr<ExecObject>);
+    std::shared_ptr<ExecValue> execFunction(std::shared_ptr<Function>,
+            std::shared_ptr<ExecObject>, std::shared_ptr<ExecObject>, std::shared_ptr<ExecObject>);
+
+    std::shared_ptr<ExecValue> execStatement(std::shared_ptr<Statement>,
+            std::shared_ptr<ExecObject>, std::shared_ptr<ExecObject>, std::shared_ptr<ExecObject>);
+
+    std::shared_ptr<ExecValue> execValue(std::shared_ptr<Value>,
+            std::shared_ptr<ExecObject>, std::shared_ptr<ExecObject>, std::shared_ptr<ExecObject>);
 
     std::shared_ptr<Program> program;
-    std::shared_ptr<ExecObject> global;
 };
 
 #endif

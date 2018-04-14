@@ -18,15 +18,11 @@ public:
         Exit = 100, Process = 10, LazyExit = 1
     };
 
-    SchedulerWorkerMessage(Type type, std::shared_ptr<void> state, std::shared_ptr<void> message) :
-            type(type), state(std::move(state)), message(std::move(message)) { };
+    SchedulerWorkerMessage(Type type, std::shared_ptr<void> message) :
+            type(type), message(std::move(message)) { };
 
     Type getType() const {
         return type;
-    }
-
-    std::shared_ptr<void> getState() const {
-        return state;
     }
 
     std::shared_ptr<void> getMessage() const {
@@ -39,7 +35,6 @@ public:
 
 private:
     Type type;
-    std::shared_ptr<void> state;
     std::shared_ptr<void> message;
 };
 
@@ -50,12 +45,12 @@ public:
             readVars(varsCount, false), writeVars(varsCount, false) { }
 
     void stop(bool wait) {
-        send(SchedulerWorkerMessage(wait ? SchedulerWorkerMessage::LazyExit : SchedulerWorkerMessage::Exit, std::shared_ptr<void>(), std::shared_ptr<void>()));
+        send(SchedulerWorkerMessage(wait ? SchedulerWorkerMessage::LazyExit : SchedulerWorkerMessage::Exit, std::shared_ptr<void>()));
         join();
     }
 
-    void schedule(std::shared_ptr<void> state, std::shared_ptr<void> message) {
-        send(SchedulerWorkerMessage(SchedulerWorkerMessage::Process, std::move(state), std::move(message)));
+    void schedule(std::shared_ptr<void> message) {
+        send(SchedulerWorkerMessage(SchedulerWorkerMessage::Process, std::move(message)));
     }
 
     bool isAvailable() const {
@@ -96,8 +91,8 @@ public:
         Exit = 1000, Release = 100, Reprocess = 10, Process = 15, LazyExit = 1
     };
 
-    SchedulerMessage(Type type, int index, std::shared_ptr<void> state, std::shared_ptr<void> message) :
-            type(type), senderIndex(index), state(std::move(state)), message(std::move(message)) { };
+    SchedulerMessage(Type type, int index, std::shared_ptr<void> message) :
+            type(type), senderIndex(index), message(std::move(message)) { };
 
     Type getType() const {
         return type;
@@ -105,10 +100,6 @@ public:
 
     int getSenderIndex() const {
         return senderIndex;
-    }
-
-    std::shared_ptr<void> getState() const {
-        return state;
     }
 
     std::shared_ptr<void> getMessage() const {
@@ -122,7 +113,6 @@ public:
 private:
     Type type;
     int senderIndex;
-    std::shared_ptr<void> state;
     std::shared_ptr<void> message;
 };
 
@@ -132,14 +122,14 @@ public:
         RWLocking, WLocking
     };
 
-    Scheduler(std::shared_ptr<void>, Type, int, int);
+    Scheduler(Type, int, int);
     ~Scheduler();
 
     void start() override;
     void stop(bool);
 
     void schedule(std::shared_ptr<void> message) {
-        send(SchedulerMessage(SchedulerMessage::Process, -1, std::shared_ptr<void>(), std::move(message)));
+        send(SchedulerMessage(SchedulerMessage::Process, -1, std::move(message)));
     }
 
     Type getType() const {
@@ -150,21 +140,25 @@ public:
         return varsCount;
     }
 
+    size_t getWorkersCount() const {
+        return workers.size();
+    }
+
 protected:
     void reschedule(std::shared_ptr<void> message) {
-        send(SchedulerMessage(SchedulerMessage::Reprocess, -1, std::shared_ptr<void>(), std::move(message)));
+        send(SchedulerMessage(SchedulerMessage::Reprocess, -1, std::move(message)));
     }
 
     friend class SchedulerWorker;
 
     bool process(SchedulerMessage& msg) override;
 
-    void workerRelease(int index, std::shared_ptr<void> state) {
-        send(SchedulerMessage(SchedulerMessage::Release, index, std::move(state), std::shared_ptr<void>()));
+    void workerRelease(int index) {
+        send(SchedulerMessage(SchedulerMessage::Release, index, std::shared_ptr<void>()));
     }
 
-    virtual void workerProcess(int, std::shared_ptr<void>, std::shared_ptr<void>) = 0;
-    virtual void updateReadonlyState(std::shared_ptr<void>, const std::vector<bool> &) = 0;
+    virtual void workerProcess(int, std::shared_ptr<void>) = 0;
+    virtual void updateReadonlyState(const std::vector<bool> &) = 0;
 
     virtual std::pair<std::vector<bool>, std::vector<bool> > getMessageVars(std::shared_ptr<void>) = 0;
 
@@ -174,7 +168,6 @@ private:
 
     Type type;
     int varsCount;
-    std::shared_ptr<void> currState;
     std::vector<SchedulerWorker*> workers;
 };
 

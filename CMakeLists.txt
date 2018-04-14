@@ -28,11 +28,11 @@ include_directories(${antlr4cpp_include_dirs_antlr} "src/")
 add_executable(interpreter
         ${antlr4cpp_src_files_antlr}
         "src/Scheduler.h" "src/Scheduler.cpp"
-        "src/Runtime.h" "src/Runtime.cpp"
+        "src/SimpleProgramRuntime.h" "src/SimpleProgramRuntime.cpp"
         "src/TestRuntime.h" "src/TestRuntime.cpp"
         "src/ProgramExecutor.cpp" "src/ProgramExecutor.h"
         "src/BuiltInFunction.cpp" "src/BuiltInFunction.h"
-        "src/SchedulerRuntime.cpp" "src/SchedulerRuntime.h"
+        "src/ProgramRuntime.cpp" "src/ProgramRuntime.h"
         "src/ProgramAnalyzer.cpp" "src/ProgramAnalyzer.h"
         "src/ServerRuntime.cpp" "src/ServerRuntime.h"
         "src/GuiRuntime.cpp" "src/GuiRuntime.h"

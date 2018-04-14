@@ -30,6 +30,8 @@ public:
         return writeVarsCount;
     }
 
+    static std::vector<std::shared_ptr<TestMessage> > generateMessages(int, int, double);
+
 private:
     int processTime;
     int readVarsCount;
@@ -38,30 +40,18 @@ private:
     std::vector<bool> writeVars;
 };
 
-class TestScheduler : public Scheduler {
+class TestRuntime : public Scheduler {
 public:
-    TestScheduler(Scheduler::Type, int, int);
+    TestRuntime(Scheduler::Type, int, int, std::vector<std::shared_ptr<TestMessage> >);
+
+    double run(double);
 
 protected:
-    void workerProcess(int i, std::shared_ptr<void> ptr, std::shared_ptr<void> shared_ptr) override;
-    void updateReadonlyState(std::shared_ptr<void>, const std::vector<bool> &) override;
-
+    void workerProcess(int, std::shared_ptr<void>) override;
+    void updateReadonlyState(const std::vector<bool> &) override;
     std::pair<std::vector<bool>, std::vector<bool> > getMessageVars(std::shared_ptr<void>) override;
-};
-
-class TestRuntime {
-public:
-    void runTests();
-
-    void prepare(int, int, double);
-    double run(Scheduler::Type, int, double);
 
 private:
-    void runPreparedTests();
-
-    int varsCount;
-    double generationParam;
-    int totalProcessingTime;
     std::vector<std::shared_ptr<TestMessage> > messages;
 };
 

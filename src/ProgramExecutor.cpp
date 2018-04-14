@@ -98,8 +98,7 @@ string ExecObject::toString() const {
 }
 
 // Executor
-ProgramExecutor::ProgramExecutor(shared_ptr<Program> program) :
-        program(move(program)), global(make_shared<ExecObject>()) {
+ProgramExecutor::ProgramExecutor(shared_ptr<Program> program) : program(move(program)) {
     initBuiltInFunctions();
 }
 
@@ -112,51 +111,57 @@ shared_ptr<ExecValue> ProgramExecutor::exec(shared_ptr<ExecValue> arg) {
     for (auto& argName : mainFunction->getArguments()) local->setField(argName, arg->clone());
 
     // execute function within the context
-    return execFunction(mainFunction, local);
+    return execFunction(mainFunction, getReadGlobal(), getWriteGlobal(), local);
 }
 
-shared_ptr<ExecValue> ProgramExecutor::execFunction(shared_ptr<Function> function, shared_ptr<ExecObject> local) {
+shared_ptr<ExecValue> ProgramExecutor::execFunction(shared_ptr<Function> function,
+                                                    shared_ptr<ExecObject> readGlobal,
+                                                    shared_ptr<ExecObject> writeGlobal,
+                                                    shared_ptr<ExecObject> local) {
     for (auto& statement : function->getStatements()) {
-        auto res = execStatement(statement, local);
+        auto res = execStatement(statement, readGlobal, writeGlobal, local);
         if (res) return res;
     }
     return shared_ptr<ExecValue>();
 }
 
-shared_ptr<ExecValue> ProgramExecutor::execStatement(shared_ptr<Statement> statement, shared_ptr<ExecObject> local) {
+shared_ptr<ExecValue> ProgramExecutor::execStatement(shared_ptr<Statement> statement,
+                                                     shared_ptr<ExecObject> readGlobal,
+                                                     shared_ptr<ExecObject> writeGlobal,
+                                                     shared_ptr<ExecObject> local) {
     if (dynamic_pointer_cast<Return>(statement)) {
-        return execValue(dynamic_pointer_cast<Return>(statement)->getValue(), local);
+        return execValue(dynamic_pointer_cast<Return>(statement)->getValue(), readGlobal, writeGlobal, local);
     }
     else if (dynamic_pointer_cast<Condition>(statement)) {
         auto cond = dynamic_pointer_cast<Condition>(statement);
-        auto condValue = dynamic_pointer_cast<ExecBoolean>(execValue(cond->getConditionValue(), local));
+        auto condValue = dynamic_pointer_cast<ExecBoolean>(execValue(cond->getConditionValue(), readGlobal, writeGlobal, local));
         if (!condValue) throw logic_error("Condition value does not evaluate to boolean.");
 
         if (condValue->getValue()) {
             for (auto& condStatement : cond->getThenStatements()) {
-                auto res = execStatement(condStatement, local);
+                auto res = execStatement(condStatement, readGlobal, writeGlobal, local);
                 if (res) return res;
             }
         }
         else {
             for (auto& condStatement : cond->getElseStatements()) {
-                auto res = execStatement(condStatement, local);
+                auto res = execStatement(condStatement, readGlobal, writeGlobal, local);
                 if (res) return res;
             }
         }
     }
     else if (dynamic_pointer_cast<ConstantAssignment>(statement)) {
         auto assign = dynamic_pointer_cast<ConstantAssignment>(statement);
-        auto value = execValue(assign->getValue(), local);
+        auto value = execValue(assign->getValue(), readGlobal, writeGlobal, local);
 
-        if (assign->getTarget()->isGlobal()) global->setFieldByPath(assign->getTarget()->getName(), value);
+        if (assign->getTarget()->isGlobal()) writeGlobal->setFieldByPath(assign->getTarget()->getName(), value);
         else local->setFieldByPath(assign->getTarget()->getName(), value);
     }
     else if (dynamic_pointer_cast<IdentifierAssignment>(statement)) {
         auto assign = dynamic_pointer_cast<IdentifierAssignment>(statement);
-        auto value = execValue(assign->getValue(), local);
+        auto value = execValue(assign->getValue(), readGlobal, writeGlobal, local);
 
-        if (assign->getTarget()->isGlobal()) global->setFieldByPath(assign->getTarget()->getName(), value);
+        if (assign->getTarget()->isGlobal()) writeGlobal->setFieldByPath(assign->getTarget()->getName(), value);
         else local->setFieldByPath(assign->getTarget()->getName(), value);
     }
     else if (dynamic_pointer_cast<CallAssignment>(statement)) {
@@ -171,14 +176,14 @@ shared_ptr<ExecValue> ProgramExecutor::execStatement(shared_ptr<Statement> state
 
             auto funcLocal = make_shared<ExecObject>();
             for (int i = 0; i < function->getArguments().size(); i++) {
-                funcLocal->setField(function->getArguments()[i], execValue(assign->getFunctionArgs()[i], local));
+                funcLocal->setField(function->getArguments()[i], execValue(assign->getFunctionArgs()[i], readGlobal, writeGlobal, local));
             }
-            value = execFunction(function, funcLocal);
+            value = execFunction(function, readGlobal, writeGlobal, funcLocal);
         }
         else if (BUILT_IN_FUNCTIONS[assign->getFunctionName()].isDefined()) {
             vector<shared_ptr<ExecValue> > args;
             for (int i = 0; i < assign->getFunctionArgs().size(); i++) {
-                args.push_back(execValue(assign->getFunctionArgs()[i], local));
+                args.push_back(execValue(assign->getFunctionArgs()[i], readGlobal, writeGlobal, local));
             }
             value = BUILT_IN_FUNCTIONS[assign->getFunctionName()](BuiltInArguments(args));
         }
@@ -186,20 +191,23 @@ shared_ptr<ExecValue> ProgramExecutor::execStatement(shared_ptr<Statement> state
             throw logic_error("Function with the name '" + assign->getFunctionName() + "' does not exist.");
         }
 
-        if (assign->getTarget()->isGlobal()) global->setFieldByPath(assign->getTarget()->getName(), value);
+        if (assign->getTarget()->isGlobal()) writeGlobal->setFieldByPath(assign->getTarget()->getName(), value);
         else local->setFieldByPath(assign->getTarget()->getName(), value);
     }
 
     return shared_ptr<ExecValue>();
 }
 
-shared_ptr<ExecValue> ProgramExecutor::execValue(shared_ptr<Value> value, shared_ptr<ExecObject> local) {
+shared_ptr<ExecValue> ProgramExecutor::execValue(shared_ptr<Value> value,
+                                                 shared_ptr<ExecObject> readGlobal,
+                                                 shared_ptr<ExecObject> writeGlobal,
+                                                 shared_ptr<ExecObject> local) {
     if (dynamic_pointer_cast<IdentifierValue>(value)) {
         auto identifier = dynamic_pointer_cast<IdentifierValue>(value);
 
         auto res = shared_ptr<ExecValue>();
         if (identifier->getIdentifier()->isGlobal()) {
-            res = global->getFieldByPath(identifier->getIdentifier()->getName());
+            res = readGlobal->getFieldByPath(identifier->getIdentifier()->getName());
         }
         else {
             res = local->getFieldByPath(identifier->getIdentifier()->getName());

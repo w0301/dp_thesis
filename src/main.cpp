@@ -1,13 +1,21 @@
 #include <string>
 #include <iostream>
 
-#include "Runtime.h"
+#include "SimpleProgramRuntime.h"
 #include "TestRuntime.h"
 
 using namespace std;
 
-void runSchedulerTest() {
-  TestRuntime().runTests();
+void runSchedulerTest(int msgsCount, int varsCount) {
+    auto messages = TestMessage::generateMessages(msgsCount, varsCount, 1.0);
+
+    double ref = TestRuntime(Scheduler::RWLocking, 1, varsCount, messages).run(-1);
+
+    TestRuntime(Scheduler::RWLocking, 2, varsCount, messages).run(ref);
+    TestRuntime(Scheduler::RWLocking, 4, varsCount, messages).run(ref);
+
+    TestRuntime(Scheduler::WLocking, 2, varsCount, messages).run(ref);
+    TestRuntime(Scheduler::WLocking, 4, varsCount, messages).run(ref);
 }
 
 void runServerTest() {
@@ -19,7 +27,7 @@ void runGuiTest() {
 }
 
 void runInterpreter(string programPath, string strArg) {
-    Runtime runtime(programPath.c_str());
+    SimpleProgramRuntime runtime(programPath.c_str());
 
     // setup arg for main
     auto arg = make_shared<ExecString>();
@@ -34,7 +42,9 @@ void runInterpreter(string programPath, string strArg) {
 
 int main(int argc, char *argv[]) {
     if (argc > 1 && string(argv[1]) == "--test-scheduler") {
-        runSchedulerTest();
+        int msgsCount = (argc > 2 ? stoi(argv[2]) : 1000);
+        int varsCount = (argc > 3 ? stoi(argv[3]) : 10);
+        runSchedulerTest(msgsCount, varsCount);
     }
     else if (argc > 1 && string(argv[1]) == "--test-server") {
         runServerTest();

@@ -9,7 +9,7 @@
 #include "LangParser.h"
 #include "LangParserBaseVisitor.h"
 
-#include "Runtime.h"
+#include "SimpleProgramRuntime.h"
 #include "Program.h"
 
 using namespace std;
@@ -149,12 +149,10 @@ private:
     wstring_convert<std::codecvt_utf8<char32_t>, char32_t> utfConverter;
 };
 
-
-// Runtime class
-Runtime::Runtime(const char *file) {
+shared_ptr<Program> parseFile(string filePath) {
     ifstream stream;
     stream.exceptions(ifstream::failbit);
-    stream.open(file);
+    stream.open(filePath);
 
     ANTLRInputStream input(stream);
 
@@ -164,5 +162,10 @@ Runtime::Runtime(const char *file) {
 
     // creating AST
     ParserVisitor visitor;
-    program = visitor.visitFile(parser.file());
+    return visitor.visitFile(parser.file());
+}
+
+// SimpleProgramRuntime class
+SimpleProgramRuntime::SimpleProgramRuntime(string filePath) :
+        ProgramExecutor(parseFile(filePath)), global(make_shared<ExecObject>()) {
 }
