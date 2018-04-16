@@ -5,8 +5,7 @@
 
 class ServerRuntime : public ProgramRuntime {
 public:
-    explicit ServerRuntime(const std::string& filePath, Scheduler::Type type, int workers) :
-            ProgramRuntime(filePath, type, workers) { }
+    explicit ServerRuntime(const std::string& filePath, Scheduler::Type type, int workers);
 };
 
 

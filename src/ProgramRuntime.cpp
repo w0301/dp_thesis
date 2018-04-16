@@ -55,14 +55,17 @@ void ProgramRuntime::run(int millis) {
 
     auto startTime = chrono::high_resolution_clock::now();
     while (true) {
-        // send new messages
-        // TODO
+        auto currTime = chrono::high_resolution_clock::now();
+
+        // sending any new messages
+        for (auto& gen : messageGenerators) {
+            if (gen.isGenerationNeeded(currTime)) schedule(gen.generate(currTime));
+        }
 
         // waiting little bit
         this_thread::sleep_for(1ms);
 
         // finish on time elapsed
-        auto currTime = chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = (currTime - startTime);
         if (elapsed > duration) break;
     }

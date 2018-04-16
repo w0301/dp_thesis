@@ -5,8 +5,7 @@
 
 class GuiRuntime : public ProgramRuntime {
 public:
-    explicit GuiRuntime(const std::string& filePath, Scheduler::Type type, int workers) :
-            ProgramRuntime(filePath, type, workers) { }
+    explicit GuiRuntime(const std::string& filePath, Scheduler::Type type, int workers);
 };
 
 
