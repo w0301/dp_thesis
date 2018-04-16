@@ -19,7 +19,7 @@ public:
 
 class ExecObject : public ExecValue {
 public:
-    void ensureFieldPath(const std::string&);
+    void ensureFieldPath(const std::string&, bool);
 
     std::shared_ptr<ExecValue> getFieldByPath(const std::string&) const;
     void setFieldByPath(const std::string&, std::shared_ptr<ExecValue>);

@@ -1,13 +1,14 @@
 #ifndef PROGRAM_H
 #define PROGRAM_H
 
+#include <set>
 #include <vector>
 #include <memory>
 #include <string>
 #include <algorithm>
 
-static std::string GLOBAL_PREFIX = "global.";
-static std::string LOCAL_PREFIX = "local.";
+extern std::string GLOBAL_PREFIX;
+extern std::string LOCAL_PREFIX;
 
 class Identifier {
 public:
@@ -212,6 +213,37 @@ public:
     explicit Function(const std::string& name) : name(name) {
     }
 
+    bool isRecursive() const {
+        return recursive;
+    }
+
+    void setRecursive(bool val) {
+        recursive = val;
+    }
+
+    const std::set<std::string>& getReadVariables() const {
+        return readVariables;
+    }
+
+    void setReadVariables(const std::set<std::string>& vars) {
+        readVariables = vars;
+    }
+
+    const std::set<std::string>& getWriteVariables() const {
+        return readVariables;
+    }
+
+    void setWriteVariables(const std::set<std::string>& vars) {
+        writeVariables = vars;
+    }
+
+    std::set<std::string> getAllVariables() {
+        std::set<std::string> res;
+        for (auto& var : readVariables) res.insert(var.substr(GLOBAL_PREFIX.length()));
+        for (auto& var : writeVariables) res.insert(var.substr(GLOBAL_PREFIX.length()));
+        return res;
+    }
+
     const std::string& getName() const {
         return name;
     }
@@ -233,6 +265,10 @@ public:
     }
 
 private:
+    bool recursive;
+    std::set<std::string> readVariables;
+    std::set<std::string> writeVariables;
+
     std::string name;
     std::vector<std::string> arguments;
     std::vector<std::shared_ptr<Statement> > statements;

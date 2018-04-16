@@ -5,6 +5,9 @@
 
 using namespace std;
 
+std::string GLOBAL_PREFIX = "global.";
+std::string LOCAL_PREFIX = "local.";
+
 string paddNewLines(const string& str, const string& padder) {
     string res = str;
 
@@ -15,7 +18,9 @@ string paddNewLines(const string& str, const string& padder) {
 }
 
 // Objects
-void ExecObject::ensureFieldPath(const string& path) {
+void ExecObject::ensureFieldPath(const string& path, bool sticky) {
+    // TODO : handle sticky properly
+
     size_t dotPos = path.find('.');
     if (dotPos == string::npos) {
         // just reassigning to ensure that pointer (maybe NULL) is created
@@ -27,7 +32,7 @@ void ExecObject::ensureFieldPath(const string& path) {
 
         // recursively creating objects
         auto subObj = make_shared<ExecObject>();
-        subObj->ensureFieldPath(subPath);
+        subObj->ensureFieldPath(subPath, false);
         fields[field] = subObj;
     }
 }

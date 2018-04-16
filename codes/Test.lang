@@ -9,12 +9,24 @@ def foo(b)
     return "val is false"
 end
 
+def fac(num)
+    local.isOne = _eq(local.num, 1)
+    if local.isOne
+        return local.num
+    end
+
+    local.aux = _sub(local.num, 1)
+    local.recRes = fac(local.aux)
+    local.res = _mul(local.num, local.recRes)
+    return local.res
+end
+
 def main(msg)
     local.a = false
     local.b = true
 
     if local.a
-        local.obj.a = 10
+        local.obj.a = -10
     else if local.b
         local.obj.a = "str"
     end
@@ -26,13 +38,15 @@ def main(msg)
     local.obj.num1 = local.obj1
     local.obj.str = null
 
-    global.a = _add(1000, 123)
+    global.a = _add(1000, -123)
     global.a = _div(global.a, 100)
     global.obj.msg = "msg test"
     global.obj.num = 100.0
 
     local.obj.a = global.a
     local.obj.glbCopy = global.obj
+
+    local.obj.factorial = fac(17)
 
     return local.obj
 end

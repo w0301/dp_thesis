@@ -126,7 +126,7 @@ public:
     ~Scheduler();
 
     void start() override;
-    void stop(bool);
+    virtual void stop(bool);
 
     void schedule(std::shared_ptr<void> message) {
         send(SchedulerMessage(SchedulerMessage::Process, -1, std::move(message)));

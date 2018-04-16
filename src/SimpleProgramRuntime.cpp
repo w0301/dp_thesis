@@ -9,8 +9,8 @@
 #include "LangParser.h"
 #include "LangParserBaseVisitor.h"
 
+#include "ProgramAnalyzer.h"
 #include "SimpleProgramRuntime.h"
-#include "Program.h"
 
 using namespace std;
 using namespace antlr;
@@ -168,5 +168,6 @@ shared_ptr<Program> parseFile(string filePath) {
 // SimpleProgramRuntime class
 SimpleProgramRuntime::SimpleProgramRuntime(string filePath) :
         ProgramExecutor(parseFile(filePath)), global(make_shared<ExecObject>()) {
-    // TODO : run analyzer for the program
+    // running analyzer which populate props in the program with analyzed data
+    ProgramAnalyzer(getProgram()).analyze();
 }
