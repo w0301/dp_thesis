@@ -60,10 +60,14 @@ class MessageGenerator {
 public:
     MessageGenerator(const std::string &name, int interval,
                      const std::function<std::shared_ptr<ExecValue>()> &generateFunc,
-                     const std::function<bool(std::shared_ptr<ExecValue>)> &isMessageFunc);
+                     const std::function<bool(std::shared_ptr<ExecValue>)> &isMessageResultFunc);
 
     const std::string& getName() const {
         return name;
+    }
+
+    const std::vector<int>& getCounters() const {
+        return counters;
     }
 
     bool isGenerationNeeded(std::chrono::time_point<std::chrono::high_resolution_clock> time) const {
@@ -76,7 +80,7 @@ public:
     }
 
     void incCounterIfNeeded(std::shared_ptr<ExecValue> msg) {
-        if (isMessageFunc(std::move(msg))) currCounter += 1;
+        if (isMessageResultFunc(std::move(msg))) currCounter += 1;
     }
 
     void finishCounter() {
@@ -88,7 +92,7 @@ private:
     std::string name;
     std::chrono::milliseconds interval;
     std::function<std::shared_ptr<ExecValue>()> generateFunc;
-    std::function<bool(std::shared_ptr<ExecValue>)> isMessageFunc;
+    std::function<bool(std::shared_ptr<ExecValue>)> isMessageResultFunc;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> lastGenerateTime;
 

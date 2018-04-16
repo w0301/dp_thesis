@@ -36,6 +36,7 @@ public:
     }
 
 private:
+    std::vector<std::string> stickyFieldPaths;
     mutable std::map<std::string, std::shared_ptr<ExecValue> > fields;
 };
 
@@ -55,8 +56,7 @@ public:
 
 template<class T> class ExecPrimitiveTemplate : public ExecPrimitive {
 public:
-    ExecPrimitiveTemplate() = default;
-    explicit ExecPrimitiveTemplate(const T& val) : value(val) { };
+    explicit ExecPrimitiveTemplate(T val) : value(std::move(val)) { };
 
     const T& getValue() const {
         return value;
@@ -72,8 +72,8 @@ private:
 
 class ExecBoolean : public ExecPrimitiveTemplate<bool> {
 public:
-    ExecBoolean() = default;
-    explicit ExecBoolean(bool val) : ExecPrimitiveTemplate(val) { };
+    ExecBoolean() : ExecPrimitiveTemplate(false) { };
+    explicit ExecBoolean(bool val) : ExecPrimitiveTemplate(val) { }
 
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecBoolean>();
@@ -88,8 +88,8 @@ public:
 
 class ExecInteger : public ExecPrimitiveTemplate<long long> {
 public:
-    ExecInteger() = default;
-    explicit ExecInteger(long long val) : ExecPrimitiveTemplate(val) { };
+    ExecInteger() : ExecPrimitiveTemplate(0) { }
+    explicit ExecInteger(long long val) : ExecPrimitiveTemplate(val) { }
 
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecInteger>();
@@ -104,8 +104,8 @@ public:
 
 class ExecFloat : public ExecPrimitiveTemplate<double> {
 public:
-    ExecFloat() = default;
-    explicit ExecFloat(double val) : ExecPrimitiveTemplate(val) { };
+    ExecFloat() : ExecPrimitiveTemplate(0.0) { }
+    explicit ExecFloat(double val) : ExecPrimitiveTemplate(val) { }
 
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecFloat>();
@@ -120,8 +120,8 @@ public:
 
 class ExecChar : public ExecPrimitiveTemplate<char32_t > {
 public:
-    ExecChar() = default;
-    explicit ExecChar(char32_t val) : ExecPrimitiveTemplate(val) { };
+    ExecChar() : ExecPrimitiveTemplate('\0') { }
+    explicit ExecChar(char32_t val) : ExecPrimitiveTemplate(val) { }
 
     std::shared_ptr<ExecValue> clone() const override {
         auto res = std::make_shared<ExecChar>();
@@ -139,7 +139,7 @@ private:
 
 class ExecString : public ExecPrimitiveTemplate<std::u32string> {
 public:
-    ExecString() = default;
+    ExecString() : ExecPrimitiveTemplate(U"") { }
     explicit ExecString(const std::u32string& val) : ExecPrimitiveTemplate(val) { };
 
     void setValueUTF8(const std::string& value) {
@@ -163,9 +163,10 @@ private:
 // Executor
 class ProgramExecutor {
 public:
-    explicit ProgramExecutor(std::shared_ptr<Program> program);
+    explicit ProgramExecutor(std::shared_ptr<Program>);
 
     std::shared_ptr<ExecValue> exec(std::shared_ptr<ExecValue>);
+    std::shared_ptr<ExecValue> execExpression(std::shared_ptr<Expression>);
 
     std::shared_ptr<Program> getProgram() {
         return program;

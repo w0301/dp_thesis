@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "ProgramRuntime.h"
 
 using namespace std;
@@ -34,8 +36,8 @@ bool ResultWorker::process(ResultWorkerMessage& msg) {
 // MessageGenerator
 MessageGenerator::MessageGenerator(const string &name, int interval,
                                    const function<shared_ptr<ExecValue>()> &generateFunc,
-                                   const function<bool(shared_ptr<ExecValue>)> &isMessageFunc) :
-        name(name), interval(interval), generateFunc(generateFunc), isMessageFunc(isMessageFunc) {
+                                   const function<bool(shared_ptr<ExecValue>)> &isMessageResultFunc) :
+        name(name), interval(interval), generateFunc(generateFunc), isMessageResultFunc(isMessageResultFunc) {
 }
 
 // Runtime
@@ -69,6 +71,19 @@ void ProgramRuntime::run(int millis) {
         std::chrono::duration<double, std::milli> elapsed = (currTime - startTime);
         if (elapsed > duration) break;
     }
+
+    // waiting for are messages beying processed and stopping
+    stop(true);
+
+
+    // printing stats data
+    cout << "===== Messages statistics =====" << endl;
+    for (auto& gen : messageGenerators) {
+        cout << gen.getName() << " - ";
+        for (int c : gen.getCounters()) cout << c << " ";
+        cout << endl;
+    }
+    cout << "===============================" << endl;
 }
 
 void ProgramRuntime::workerProcess(int index, shared_ptr<void> msg) {

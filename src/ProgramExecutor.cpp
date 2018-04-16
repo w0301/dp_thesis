@@ -19,7 +19,10 @@ string paddNewLines(const string& str, const string& padder) {
 
 // Objects
 void ExecObject::ensureFieldPath(const string& path, bool sticky) {
-    // TODO : handle sticky properly
+    if (path.length() == 0) return;
+
+    // save path for sticky handling
+    if (sticky) stickyFieldPaths.push_back(path);
 
     size_t dotPos = path.find('.');
     if (dotPos == string::npos) {
@@ -62,8 +65,16 @@ void ExecObject::setFieldByPath(const string& path, shared_ptr<ExecValue> val) {
     // we do store special null values!
     if (dynamic_pointer_cast<ExecNull>(val)) val = shared_ptr<ExecValue>();
 
-    // TODO : ensure needed sub-paths in the val here!!!
+    // ensuring needed sticky sub-paths in the val here!!!
+    if (dynamic_pointer_cast<ExecObject>(val)) {
+        for (auto& stickyPath : stickyFieldPaths) {
+            if (stickyPath.find(path + ".") == 0) {
+                dynamic_pointer_cast<ExecObject>(val)->ensureFieldPath(stickyPath.substr(path.length() + 1), false);
+            }
+        }
+    }
 
+    // setting value
     size_t dotPos = path.find('.');
     if (dotPos == string::npos) {
         fields[path] = val;
@@ -117,6 +128,11 @@ shared_ptr<ExecValue> ProgramExecutor::exec(shared_ptr<ExecValue> arg) {
 
     // execute function within the context
     return execFunction(mainFunction, getReadGlobal(), getWriteGlobal(), local);
+}
+
+shared_ptr<ExecValue> ProgramExecutor::execExpression(shared_ptr<Expression> expression) {
+    // TODO : implement this
+    return make_shared<ExecBoolean>(true);
 }
 
 shared_ptr<ExecValue> ProgramExecutor::execFunction(shared_ptr<Function> function,

@@ -10,6 +10,7 @@
 extern std::string GLOBAL_PREFIX;
 extern std::string LOCAL_PREFIX;
 
+// Utils
 class Identifier {
 public:
     bool isGlobal() const {
@@ -37,6 +38,7 @@ private:
     std::string fullName;
 };
 
+// Values
 class Value {
 public:
     virtual ~Value() = default;
@@ -92,6 +94,14 @@ private:
     std::shared_ptr<Identifier> identifier;
 };
 
+// Expressions
+class Expression {
+public:
+    // TODO : create expression hierarchy
+    virtual ~Expression() = default;
+};
+
+// Statements
 class Statement {
 public:
     virtual ~Statement() = default;
@@ -208,6 +218,7 @@ private:
     std::vector<std::shared_ptr<Statement> > elseStatements;
 };
 
+// TopLevel structures
 class Function {
 public:
     explicit Function(const std::string& name) : name(name) {
