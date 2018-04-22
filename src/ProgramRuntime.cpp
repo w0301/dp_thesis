@@ -118,12 +118,18 @@ std::pair< std::vector<bool>, std::vector<bool> > ProgramRuntime::getMessageVars
     for (auto& var : variables) {
         // handling read expressions
         for (auto& exp : mainFunction->getReadExpressions()[var]) {
-            if (dynamic_pointer_cast<ExecBoolean>(execExpression(exp, mainLocal))->getValue()) readVars.insert(var);
+            if (dynamic_pointer_cast<ExecBoolean>(execExpression(exp, mainLocal))->getValue()) {
+                readVars.insert(var);
+                break;
+            }
         }
 
         // handling write expressions
         for (auto& exp : mainFunction->getWriteExpressions()[var]) {
-            if (dynamic_pointer_cast<ExecBoolean>(execExpression(exp, mainLocal))->getValue()) writeVars.insert(var);
+            if (dynamic_pointer_cast<ExecBoolean>(execExpression(exp, mainLocal))->getValue()) {
+                writeVars.insert(var);
+                break;
+            }
         }
     }
 

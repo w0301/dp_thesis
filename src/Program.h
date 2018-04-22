@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <locale>
+#include <codecvt>
 #include <algorithm>
 
 extern std::string GLOBAL_PREFIX;
@@ -99,6 +101,7 @@ private:
 class Expression {
 public:
     virtual bool isUndetermined() const = 0;
+    virtual std::string toString() const = 0;
 };
 
 class CallExpression : public Expression {
@@ -119,6 +122,15 @@ public:
             if (!arg || arg->isUndetermined()) return true;
         }
         return false;
+    }
+
+    std::string toString() const override {
+        std::string res;
+        res += "(";
+        res += "<" + name + ">";
+        for (auto& arg : arguments) res += " " + arg->toString();
+        res += ")";
+        return res;
     }
 
 private:
@@ -150,6 +162,18 @@ public:
                thenExpression->isUndetermined() || elseExpression->isUndetermined();
     }
 
+    std::string toString() const override {
+        std::string res;
+        res += "(<if> ";
+        res += conditionExpression->toString();
+        res += " ";
+        res += thenExpression->toString();
+        res += " ";
+        res += elseExpression->toString();
+        res += ")";
+        return res;
+    }
+
 private:
     std::shared_ptr<Expression> conditionExpression;
     std::shared_ptr<Expression> thenExpression;
@@ -168,14 +192,41 @@ public:
         return false;
     }
 
+    std::string toString() const override {
+        if (std::dynamic_pointer_cast<BooleanValue>(value)) {
+            return std::dynamic_pointer_cast<BooleanValue>(value)->getValue() ? "true" : "false";
+        }
+        if (std::dynamic_pointer_cast<IntegerValue>(value)) {
+            return std::to_string(std::dynamic_pointer_cast<IntegerValue>(value)->getValue());
+        }
+        if (std::dynamic_pointer_cast<FloatValue>(value)) {
+            return std::to_string(std::dynamic_pointer_cast<FloatValue>(value)->getValue());
+        }
+        if (std::dynamic_pointer_cast<CharValue>(value)) {
+            return "'" + utfConverter.to_bytes(std::dynamic_pointer_cast<CharValue>(value)->getValue()) + "'";
+        }
+        if (std::dynamic_pointer_cast<StringValue>(value)) {
+            return "\"" + utfConverter.to_bytes(std::dynamic_pointer_cast<StringValue>(value)->getValue()) + "\"";
+        }
+        if (std::dynamic_pointer_cast<IdentifierValue>(value)) {
+            return std::dynamic_pointer_cast<IdentifierValue>(value)->getIdentifier()->getFullName();
+        }
+        return "<value>";
+    }
+
 private:
     std::shared_ptr<Value> value;
+    mutable std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> utfConverter;
 };
 
 class UndeterminedExpression : public Expression {
 public:
     bool isUndetermined() const override {
         return true;
+    }
+
+    std::string toString() const override {
+        return "<undetermined>";
     }
 };
 
@@ -337,19 +388,19 @@ public:
         return res;
     }
 
-    std::map<std::string, std::vector<std::shared_ptr<Expression> > >& getReadExpressions() {
+    std::map<std::string, std::set<std::shared_ptr<Expression> > >& getReadExpressions() {
         return readExpressions;
     }
 
-    void setReadExpressions(const std::map<std::string, std::vector<std::shared_ptr<Expression> > >& expressions) {
+    void setReadExpressions(const std::map<std::string, std::set<std::shared_ptr<Expression> > >& expressions) {
         readExpressions = expressions;
     }
 
-    std::map<std::string, std::vector<std::shared_ptr<Expression> > >& getWriteExpressions() {
+    std::map<std::string, std::set<std::shared_ptr<Expression> > >& getWriteExpressions() {
         return writeExpressions;
     }
 
-    void setWriteExpressions(const std::map<std::string, std::vector<std::shared_ptr<Expression> > > &expressions) {
+    void setWriteExpressions(const std::map<std::string, std::set<std::shared_ptr<Expression> > > &expressions) {
         writeExpressions = expressions;
     }
 
@@ -378,8 +429,8 @@ private:
     std::set<std::string> readVariables;
     std::set<std::string> writeVariables;
 
-    std::map<std::string, std::vector<std::shared_ptr<Expression> > > readExpressions;
-    std::map<std::string, std::vector<std::shared_ptr<Expression> > > writeExpressions;
+    std::map<std::string, std::set<std::shared_ptr<Expression> > > readExpressions;
+    std::map<std::string, std::set<std::shared_ptr<Expression> > > writeExpressions;
 
     std::string name;
     std::vector<std::string> arguments;

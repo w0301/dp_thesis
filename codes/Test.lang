@@ -9,6 +9,14 @@ def foo(b)
         global.test = "was false"
     end
 
+    local.fac = fac(5)
+    local.test = _eq(local.fac, 120)
+    if local.test
+        global.data3 = true
+    else
+        global.data4 = global.test
+    end
+
     return "val is false"
 end
 
@@ -32,6 +40,16 @@ def main(msg)
         local.obj.a = -10
     else if local.b
         local.obj.a = "str"
+    end
+
+    local.x = _eq(local.msg, "type1")
+    if local.x
+        global.data1 = local.msg
+    else
+        local.x = _eq(local.msg, "type2")
+        if local.x
+            global.data2 = local.msg
+        end
     end
 
     local.obj.num = 10000
