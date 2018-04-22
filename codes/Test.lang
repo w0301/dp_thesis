@@ -3,7 +3,10 @@ def foo(b)
     local.c = false
 
     if local.b
+        global.test = "was true"
         return "val is true"
+    else
+        global.test = "was false"
     end
 
     return "val is false"

@@ -241,7 +241,7 @@ public:
     }
 
     const std::set<std::string>& getWriteVariables() const {
-        return readVariables;
+        return writeVariables;
     }
 
     void setWriteVariables(const std::set<std::string>& vars) {
@@ -253,6 +253,10 @@ public:
         for (auto& var : readVariables) res.insert(var.substr(GLOBAL_PREFIX.length()));
         for (auto& var : writeVariables) res.insert(var.substr(GLOBAL_PREFIX.length()));
         return res;
+    }
+
+    bool isUsingGlobal() const {
+        return readVariables.size() > 0 || writeVariables.size() > 0;
     }
 
     const std::string& getName() const {
