@@ -2,6 +2,7 @@
 #define PROGRAM_H
 
 #include <set>
+#include <map>
 #include <vector>
 #include <memory>
 #include <string>
@@ -97,8 +98,85 @@ private:
 // Expressions
 class Expression {
 public:
-    // TODO : create expression hierarchy
-    virtual ~Expression() = default;
+    virtual bool isUndetermined() const = 0;
+};
+
+class CallExpression : public Expression {
+public:
+    explicit CallExpression(std::string name, std::vector<std::shared_ptr<Expression> > arguments)
+            : name(std::move(name)), arguments(std::move(arguments)) { }
+
+    const std::string& getName() const {
+        return name;
+    }
+
+    const std::vector<std::shared_ptr<Expression> >& getArguments() const {
+        return arguments;
+    }
+
+    bool isUndetermined() const override {
+        for (auto& arg : arguments) {
+            if (!arg || arg->isUndetermined()) return true;
+        }
+        return false;
+    }
+
+private:
+    std::string name;
+    std::vector<std::shared_ptr<Expression> > arguments;
+};
+
+class ConditionExpression : public Expression {
+public:
+    ConditionExpression(std::shared_ptr<Expression> conditionExpression, std::shared_ptr<Expression> thenExpression,
+                        std::shared_ptr<Expression> elseExpression) :
+            conditionExpression(std::move(conditionExpression)), thenExpression(std::move(thenExpression)),
+            elseExpression(std::move(elseExpression)) { }
+
+    const std::shared_ptr<Expression>& getConditionExpression() const {
+        return conditionExpression;
+    }
+
+    const std::shared_ptr<Expression>& getThenExpression() const {
+        return thenExpression;
+    }
+
+    const std::shared_ptr<Expression>& getElseExpression() const {
+        return elseExpression;
+    }
+
+    bool isUndetermined() const override {
+        return !conditionExpression || !thenExpression || !elseExpression || conditionExpression->isUndetermined() ||
+               thenExpression->isUndetermined() || elseExpression->isUndetermined();
+    }
+
+private:
+    std::shared_ptr<Expression> conditionExpression;
+    std::shared_ptr<Expression> thenExpression;
+    std::shared_ptr<Expression> elseExpression;
+};
+
+class ValueExpression : public Expression {
+public:
+    explicit ValueExpression(std::shared_ptr<Value> value) : value(std::move(value)) { }
+
+    const std::shared_ptr<Value>& getValue() const {
+        return value;
+    }
+
+    bool isUndetermined() const override {
+        return false;
+    }
+
+private:
+    std::shared_ptr<Value> value;
+};
+
+class UndeterminedExpression : public Expression {
+public:
+    bool isUndetermined() const override {
+        return true;
+    }
 };
 
 // Statements
@@ -221,7 +299,11 @@ private:
 // TopLevel structures
 class Function {
 public:
-    explicit Function(const std::string& name) : name(name) {
+    explicit Function(const std::string& name) : name(name), recursive(false) {
+    }
+
+    bool isUsingGlobal() const {
+        return readVariables.size() > 0 || writeVariables.size() > 0;
     }
 
     bool isRecursive() const {
@@ -255,8 +337,20 @@ public:
         return res;
     }
 
-    bool isUsingGlobal() const {
-        return readVariables.size() > 0 || writeVariables.size() > 0;
+    std::map<std::string, std::vector<std::shared_ptr<Expression> > >& getReadExpressions() {
+        return readExpressions;
+    }
+
+    void setReadExpressions(const std::map<std::string, std::vector<std::shared_ptr<Expression> > >& expressions) {
+        readExpressions = expressions;
+    }
+
+    std::map<std::string, std::vector<std::shared_ptr<Expression> > >& getWriteExpressions() {
+        return writeExpressions;
+    }
+
+    void setWriteExpressions(const std::map<std::string, std::vector<std::shared_ptr<Expression> > > &expressions) {
+        writeExpressions = expressions;
     }
 
     const std::string& getName() const {
@@ -283,6 +377,9 @@ private:
     bool recursive;
     std::set<std::string> readVariables;
     std::set<std::string> writeVariables;
+
+    std::map<std::string, std::vector<std::shared_ptr<Expression> > > readExpressions;
+    std::map<std::string, std::vector<std::shared_ptr<Expression> > > writeExpressions;
 
     std::string name;
     std::vector<std::string> arguments;

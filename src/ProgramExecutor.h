@@ -166,7 +166,7 @@ public:
     explicit ProgramExecutor(std::shared_ptr<Program>);
 
     std::shared_ptr<ExecValue> exec(std::shared_ptr<ExecValue>);
-    std::shared_ptr<ExecValue> execExpression(std::shared_ptr<Expression>);
+    std::shared_ptr<ExecValue> execExpression(std::shared_ptr<Expression>, std::shared_ptr<ExecObject>);
 
     std::shared_ptr<Program> getProgram() {
         return program;

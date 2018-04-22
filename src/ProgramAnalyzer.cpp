@@ -5,6 +5,10 @@
 using namespace std;
 
 void ProgramAnalyzer::analyze() {
+    auto trueValue = make_shared<BooleanValue>();
+    trueValue->setValue(true);
+    auto trueExpression = make_shared<ValueExpression>(trueValue);
+
     // running analyzers for the functions
     for (auto& function : program->getFunctions()) {
         // first recursive functions determination
@@ -18,7 +22,13 @@ void ProgramAnalyzer::analyze() {
         function->setReadVariables(readVars);
         function->setWriteVariables(writeVars);
 
-        // TODO : other analysis
+        // extract expressions for each variable
+        map<string, shared_ptr<Expression> > currExpressions;
+        map<string, vector<shared_ptr<Expression> > > readExpressions, writeExpressions;
+
+        determineFunctionExpressions(function, trueExpression, currExpressions, readExpressions, writeExpressions);
+        function->setReadExpressions(readExpressions);
+        function->setWriteExpressions(writeExpressions);
     }
 
     // just some debug prints
@@ -122,4 +132,20 @@ void ProgramAnalyzer::determineFunctionStatementVariables(shared_ptr<Statement> 
             determineFunctionStatementVariables(stat, readVars, writeVars, visitedFunctions);
         }
     }
+}
+
+void ProgramAnalyzer::determineFunctionExpressions(shared_ptr<Function> currFunction, shared_ptr<Expression> currCond,
+                                                   map<string, shared_ptr<Expression> >& currExpressions,
+                                                   map<string, vector<shared_ptr<Expression> > >& readExpressions,
+                                                   map<string, vector<shared_ptr<Expression> > >& writeExpressions) {
+    for (auto& stat : currFunction->getStatements()) {
+        determineFunctionStatementExpressions(stat, currCond, currExpressions, readExpressions, writeExpressions);
+    }
+}
+
+void ProgramAnalyzer::determineFunctionStatementExpressions(shared_ptr<Statement> currStatement, shared_ptr<Expression> currCond,
+                                                            map<string, shared_ptr<Expression> >& currExpressions,
+                                                            map<string, vector<shared_ptr<Expression> > >& readExpressions,
+                                                            map<string, vector<shared_ptr<Expression> > >& writeExpressions) {
+
 }

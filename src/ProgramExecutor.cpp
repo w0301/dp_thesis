@@ -130,9 +130,52 @@ shared_ptr<ExecValue> ProgramExecutor::exec(shared_ptr<ExecValue> arg) {
     return execFunction(mainFunction, getReadGlobal(), getWriteGlobal(), local);
 }
 
-shared_ptr<ExecValue> ProgramExecutor::execExpression(shared_ptr<Expression> expression) {
-    // TODO : implement this
-    return make_shared<ExecBoolean>(true);
+shared_ptr<ExecValue> ProgramExecutor::execExpression(shared_ptr<Expression> expression, std::shared_ptr<ExecObject> local) {
+    if (dynamic_pointer_cast<ValueExpression>(expression)) {
+        return execValue(dynamic_pointer_cast<ValueExpression>(expression)->getValue(),
+                         shared_ptr<ExecObject>(), shared_ptr<ExecObject>(), local);
+    }
+    else if (dynamic_pointer_cast<CallExpression>(expression)) {
+        auto exp = dynamic_pointer_cast<CallExpression>(expression);
+        auto function = program->getFunction(exp->getName());
+
+        auto value = shared_ptr<ExecValue>();
+        if (function) {
+            if (function->getArguments().size() != exp->getArguments().size()) {
+                throw logic_error("Bad arguments count for the function named '" + function->getName() + "'.");
+            }
+
+            auto funcLocal = make_shared<ExecObject>();
+            for (int i = 0; i < function->getArguments().size(); i++) {
+                funcLocal->setField(function->getArguments()[i], execExpression(exp->getArguments()[i], local));
+            }
+            value = execFunction(function, shared_ptr<ExecObject>(), shared_ptr<ExecObject>(), funcLocal);
+        }
+        else if (BUILT_IN_FUNCTIONS[exp->getName()].isDefined()) {
+            vector<shared_ptr<ExecValue> > args;
+            for (int i = 0; i < exp->getArguments().size(); i++) {
+                args.push_back(execExpression(exp->getArguments()[i], local));
+            }
+            value = BUILT_IN_FUNCTIONS[exp->getName()](BuiltInArguments(args));
+        }
+        else {
+            throw logic_error("Function with the name '" + exp->getName() + "' does not exist.");
+        }
+
+        return value;
+    }
+    else if (dynamic_pointer_cast<ConditionExpression>(expression)) {
+        auto exp = dynamic_pointer_cast<ConditionExpression>(expression);
+        auto cond = execExpression(exp->getConditionExpression(), local);
+        if (!dynamic_pointer_cast<ExecBoolean>(cond)) {
+            throw logic_error("Condition expression does not evaluate to boolean.");
+        }
+
+        return execExpression(dynamic_pointer_cast<ExecBoolean>(cond)->getValue() ? exp->getThenExpression() : exp->getElseExpression(), local);
+    }
+
+    // expression in undetermined
+    throw logic_error("Cannot execute undetermined expression.");
 }
 
 shared_ptr<ExecValue> ProgramExecutor::execFunction(shared_ptr<Function> function,

@@ -110,10 +110,24 @@ void ProgramRuntime::updateReadonlyState(const std::vector<bool> &writes) {
 std::pair< std::vector<bool>, std::vector<bool> > ProgramRuntime::getMessageVars(std::shared_ptr<void> msg) {
     // TODO : do some kind of caching here based on the msg pointer address
 
-    // TODO : set following set according to expressions found by analyzer
+    // determine sets of variables according to expressions found by analyzer
     set<string> readVars;
     set<string> writeVars;
+    auto mainFunction = getProgram()->getFunction("main");
+    auto mainLocal = static_pointer_cast<ExecObject>(msg);
+    for (auto& var : variables) {
+        // handling read expressions
+        for (auto& exp : mainFunction->getReadExpressions()[var]) {
+            if (dynamic_pointer_cast<ExecBoolean>(execExpression(exp, mainLocal))->getValue()) readVars.insert(var);
+        }
 
+        // handling write expressions
+        for (auto& exp : mainFunction->getWriteExpressions()[var]) {
+            if (dynamic_pointer_cast<ExecBoolean>(execExpression(exp, mainLocal))->getValue()) writeVars.insert(var);
+        }
+    }
+
+    // creating final binary vectors
     auto res = make_pair(vector<bool>(variables.size(), false), vector<bool>(variables.size(), false));
 
     int i = 0;
