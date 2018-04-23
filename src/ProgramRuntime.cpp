@@ -108,8 +108,6 @@ void ProgramRuntime::updateReadonlyState(const std::vector<bool> &writes) {
 }
 
 std::pair< std::vector<bool>, std::vector<bool> > ProgramRuntime::getMessageVars(std::shared_ptr<void> msg) {
-    // TODO : do some kind of caching here based on the msg pointer address
-
     // determine sets of variables according to expressions found by analyzer
     set<string> readVars;
     set<string> writeVars;

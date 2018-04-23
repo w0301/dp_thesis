@@ -211,6 +211,9 @@ public:
         if (std::dynamic_pointer_cast<IdentifierValue>(value)) {
             return std::dynamic_pointer_cast<IdentifierValue>(value)->getIdentifier()->getFullName();
         }
+        if (std::dynamic_pointer_cast<NullValue>(value)) {
+            return "null";
+        }
         return "<value>";
     }
 

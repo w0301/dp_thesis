@@ -52,7 +52,6 @@ void ProgramAnalyzer::analyze() {
                 cout << "      - " << exp->toString() << "" << endl;
             }
         }
-        cout << endl;
 
         cout << "  - writeExpressions:" << endl;
         for (auto& exps : function->getWriteExpressions()) {
@@ -61,7 +60,6 @@ void ProgramAnalyzer::analyze() {
                 cout << "      - " << exp->toString() << "" << endl;
             }
         }
-        cout << endl;
     }
 }
 
@@ -176,12 +174,17 @@ void ProgramAnalyzer::determineFunctionStatementExpressions(shared_ptr<Statement
     trueValue->setValue(true);
     auto trueExpression = make_shared<ValueExpression>(trueValue);
 
+    auto nullValue = make_shared<NullValue>();
+    auto nullExpression = make_shared<ValueExpression>(nullValue);
+
     if (dynamic_pointer_cast<Return>(currStatement)) {
         auto value = dynamic_pointer_cast<Return>(currStatement)->getValue();
+        shared_ptr<Expression> valueExp;
+
         if (dynamic_pointer_cast<IdentifierValue>(value)) {
             if (dynamic_pointer_cast<IdentifierValue>(value)->getIdentifier()->isGlobal()) {
                 auto name = dynamic_pointer_cast<IdentifierValue>(value)->getIdentifier()->getName();
-                localExpressions["&return&"] = globalExpressions[name];
+                valueExp = globalExpressions[name];
 
                 // also adding currCond expression to reads if it can be determined!
                 if (!currCond->isUndetermined()) readExpressions[name].insert(currCond);
@@ -193,12 +196,46 @@ void ProgramAnalyzer::determineFunctionStatementExpressions(shared_ptr<Statement
             else {
                 // local variables can be read even when not determined!!!
                 auto oldExp = localExpressions[dynamic_pointer_cast<IdentifierValue>(value)->getIdentifier()->getName()];
-                localExpressions["&return&"] = (oldExp ? oldExp : static_pointer_cast<Expression>(make_shared<ValueExpression>(value)));
+                valueExp = (oldExp ? oldExp : static_pointer_cast<Expression>(make_shared<ValueExpression>(value)));
             }
         }
         else {
-            localExpressions["&return&"] = make_shared<ValueExpression>(value);
+            valueExp = make_shared<ValueExpression>(value);
         }
+
+        // setting actual return expression only if was not set previouslym otherwise it is undetermined
+        if (!localExpressions["&return&"]) {
+            localExpressions["&return&"] = valueExp;
+        }
+        else {
+            localExpressions["&return&"] = make_shared<UndeterminedExpression>();
+        }
+
+        // TODO : should following approach be used instead of the one above???
+        // setting helper condition when return can occur
+        /*shared_ptr<Expression> oldReturnCond;
+        if (!localExpressions["&returnCond&"]) {
+            localExpressions["&returnCond&"] = currCond;
+        }
+        else {
+            oldReturnCond = localExpressions["&returnCond&"];
+
+            vector<shared_ptr<Expression> > args;
+            args.push_back(oldReturnCond);
+            args.push_back(currCond);
+            localExpressions["&returnCond&"] = make_shared<CallExpression>("_or", args);
+        }
+
+        // setting actual return expression
+        if (!localExpressions["&return&"] || !oldReturnCond) {
+            localExpressions["&return&"] = valueExp;
+        }
+        else {
+            localExpressions["&return&"] = make_shared<ConditionExpression>(
+                    oldReturnCond, localExpressions["&return&"],
+                    make_shared<ConditionExpression>(localExpressions["&returnCond&"], valueExp, nullExpression)
+            );
+        }*/
     }
     else if (dynamic_pointer_cast<Condition>(currStatement)) {
         auto cond = dynamic_pointer_cast<Condition>(currStatement);
@@ -261,6 +298,9 @@ void ProgramAnalyzer::determineFunctionStatementExpressions(shared_ptr<Statement
         for (auto& pair : elseLocalExpressions) localExpressionsKeys.insert(pair.first);
 
         for (auto& key : localExpressionsKeys) {
+            if (!thenLocalExpressions[key]) thenLocalExpressions[key] = nullExpression;
+            if (!elseLocalExpressions[key]) elseLocalExpressions[key] = nullExpression;
+
             if (thenLocalExpressions[key] != elseLocalExpressions[key]) {
                 localExpressions[key] = make_shared<ConditionExpression>(condExp, thenLocalExpressions[key], elseLocalExpressions[key]);
             }

@@ -32,42 +32,37 @@ def fac(num)
     return local.res
 end
 
-def main(msg)
-    local.a = false
-    local.b = true
-
-    if local.a
-        local.obj.a = -10
-    else if local.b
-        local.obj.a = "str"
-    end
-
-    local.x = _eq(local.msg, "type1")
-    if local.x
-        global.data1 = local.msg
+def inMain(msg)
+    local.test = _eq(local.msg, "type1")
+    if local.test
+        global.type1data = local.msg
     else
-        local.x = _eq(local.msg, "type2")
-        if local.x
-            global.data2 = local.msg
+        local.test = _eq(local.msg, "type2")
+        if local.test
+            global.type2data = local.msg
         end
     end
 
-    local.obj.num = 10000
-    local.obj.obj.str = local.msg
-    local.obj.obj2.obj3.aVal = foo(local.a)
-    local.obj.obj2.obj3.bVal = foo(local.b)
-    local.obj.num1 = local.obj1
-    local.obj.str = null
+    return local.msg
+end
 
-    global.a = _add(1000, -123)
-    global.a = _div(global.a, 100)
-    global.obj.msg = "msg test"
-    global.obj.num = 100.0
+def main(msg)
+    local.res = inMain(local.msg)
 
-    local.obj.a = global.a
-    local.obj.glbCopy = global.obj
+    local.test1 = _eq(local.res, "type1")
+    local.test2 = _eq(local.res, "type2")
 
-    local.obj.factorial = fac(17)
+    local.test3aux = _eq(local.test1, local.test2)
+    local.test3aux2 = _neg(local.test1)
+    local.test3 = _and(local.test3aux, local.test3aux2)
 
-    return local.obj
+    if local.test1
+        global.res.wasType1 = true
+    else if local.test2
+        global.res.wasType2 = true
+    else if local.test3
+        global.res.wasUnknown = true
+    end
+
+    return global.res
 end
