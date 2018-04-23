@@ -33,21 +33,22 @@ def fac(num)
 end
 
 def inMain(msg)
-    local.test = _eq(local.msg, "type1")
+    local.test = _eq(local.msg.type, "type1")
     if local.test
-        global.type1data = local.msg
+        global.type1data = local.msg.type
     else
-        local.test = _eq(local.msg, "type2")
+        local.test = _eq(local.msg.type, "type2")
         if local.test
-            global.type2data = local.msg
+            global.type2data = local.msg.type
         end
     end
 
-    return local.msg
+    return local.msg.type
 end
 
 def main(msg)
-    local.res = inMain(local.msg)
+    local.msg2.type = local.msg
+    local.res = inMain(local.msg2)
 
     local.test1 = _eq(local.res, "type1")
     local.test2 = _eq(local.res, "type2")

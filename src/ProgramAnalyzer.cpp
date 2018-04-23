@@ -203,38 +203,27 @@ void ProgramAnalyzer::determineFunctionStatementExpressions(shared_ptr<Statement
             valueExp = make_shared<ValueExpression>(value);
         }
 
-        // setting actual return expression only if was not set previouslym otherwise it is undetermined
+        // setting actual return expression
         if (!localExpressions["&return&"]) {
-            localExpressions["&return&"] = valueExp;
+            localExpressions["&return&"] = make_shared<ConditionExpression>(currCond, valueExp, nullExpression);
+        }
+        else {
+            auto oldReturn = static_pointer_cast<ConditionExpression>(localExpressions["&return&"]);
+
+            localExpressions["&return&"] = make_shared<ConditionExpression>(
+                    oldReturn->getConditionExpression(),
+                    oldReturn->getThenExpression(),
+                    make_shared<ConditionExpression>(currCond, valueExp, oldReturn->getElseExpression())
+            );
+        }
+
+        // TODO : should following easier approach be used instead of the one above??? ... probably the one above is correct
+        // setting actual return expression only if was not set previously otherwise it is undetermined
+        /*if (!localExpressions["&return&"]) {
+            localExpressions["&return&"] = make_shared<ConditionExpression>(currCond, valueExp, nullExpression);
         }
         else {
             localExpressions["&return&"] = make_shared<UndeterminedExpression>();
-        }
-
-        // TODO : should following approach be used instead of the one above???
-        // setting helper condition when return can occur
-        /*shared_ptr<Expression> oldReturnCond;
-        if (!localExpressions["&returnCond&"]) {
-            localExpressions["&returnCond&"] = currCond;
-        }
-        else {
-            oldReturnCond = localExpressions["&returnCond&"];
-
-            vector<shared_ptr<Expression> > args;
-            args.push_back(oldReturnCond);
-            args.push_back(currCond);
-            localExpressions["&returnCond&"] = make_shared<CallExpression>("_or", args);
-        }
-
-        // setting actual return expression
-        if (!localExpressions["&return&"] || !oldReturnCond) {
-            localExpressions["&return&"] = valueExp;
-        }
-        else {
-            localExpressions["&return&"] = make_shared<ConditionExpression>(
-                    oldReturnCond, localExpressions["&return&"],
-                    make_shared<ConditionExpression>(localExpressions["&returnCond&"], valueExp, nullExpression)
-            );
         }*/
     }
     else if (dynamic_pointer_cast<Condition>(currStatement)) {
@@ -352,11 +341,27 @@ void ProgramAnalyzer::determineFunctionStatementExpressions(shared_ptr<Statement
                     throw logic_error("Function " + function->getName() + " called with wrong number of arguments.");
                 }
 
-                // building new local contex
+                // building new local context
                 map<string, shared_ptr<Expression> > newLocalExpressions;
                 int i = 0;
                 for (auto& argName : function->getArguments()) {
                     newLocalExpressions[argName] = args[i];
+
+                    // adding also subexpressions
+                    for (auto& arg : dynamic_pointer_cast<CallAssignment>(assign)->getFunctionArgs()) {
+                        if (dynamic_pointer_cast<IdentifierValue>(arg)) {
+                            auto ident = dynamic_pointer_cast<IdentifierValue>(arg)->getIdentifier();
+
+                            if (!ident->isGlobal()) {
+                                for (auto& expr : localExpressions) {
+                                    if (expr.first.find(ident->getName() + ".") == 0) {
+                                        newLocalExpressions[argName + expr.first.substr(ident->getName().length())] = expr.second;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     i += 1;
                 }
 
