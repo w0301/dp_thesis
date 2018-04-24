@@ -19,9 +19,12 @@ bool ResultWorker::process(ResultWorkerMessage& msg) {
         auto currTime = chrono::high_resolution_clock::now();
 
         // finishing old rounds
-        std::chrono::duration<double, std::milli> elapsedSinceLast = (currTime - lastResultTime);
+        std::chrono::duration<double, std::milli> elapsedSinceLast = (currTime - lastRoundTime);
         int roundsToFinish = (int)(elapsedSinceLast.count() / 1000.0);
-        runtime.finishStatRounds(roundsToFinish);
+        if (roundsToFinish > 0) {
+            runtime.finishStatRounds(roundsToFinish);
+            lastRoundTime = currTime;
+        }
 
         // inc counter for message
         runtime.incStatCounter(msg.getResult());
@@ -44,8 +47,10 @@ MessageGenerator::MessageGenerator(const string &name, int interval,
 ProgramRuntime::ProgramRuntime(string filePath, Scheduler::Type type, int workers) :
         SimpleProgramRuntime(move(filePath)),
         Scheduler(type, workers, (int)getProgram()->getFunction("main")->getAllVariables().size()),
-        resultWorker(*this), variables(getProgram()->getFunction("main")->getAllVariables()),
+        variables(getProgram()->getFunction("main")->getAllVariables()),
         readonlyGlobal(make_shared<ExecObject>()) {
+    resultWorker = make_shared<ResultWorker>(*this);
+
     for (auto& var : variables) {
         getReadGlobal()->ensureFieldPath(var, true);
         getWriteGlobal()->ensureFieldPath(var, true);
@@ -53,6 +58,11 @@ ProgramRuntime::ProgramRuntime(string filePath, Scheduler::Type type, int worker
 }
 
 void ProgramRuntime::run(int millis) {
+    start();
+
+    auto initMsg = createInitMessage();
+    if (initMsg) schedule(initMsg);
+
     chrono::milliseconds duration(millis);
 
     auto startTime = chrono::high_resolution_clock::now();
@@ -72,22 +82,41 @@ void ProgramRuntime::run(int millis) {
         if (elapsed > duration) break;
     }
 
-    // waiting for are messages beying processed and stopping
-    stop(true);
+    // killing the execution
+    stop(false);
 
+    // finishing last statistics round
+    finishStatRounds();
+
+    // printing final global state
+    cout << "======== Global state =========" << endl;
+    cout << getWriteGlobal()->toString() << endl;
+    cout << "===============================" << endl << endl;
 
     // printing stats data
     cout << "===== Messages statistics =====" << endl;
     for (auto& gen : messageGenerators) {
-        cout << gen.getName() << " - ";
-        for (int c : gen.getCounters()) cout << c << " ";
-        cout << endl;
+        cout << gen.getName() << ":" << endl;
+
+        int total = 0, min = INT32_MAX, max = 0;
+        for (int c : gen.getCounters()) {
+            total += c;
+            if (c < min) min = c;
+            if (c > max) max = c;
+        }
+
+        cout << "  - total seconds: " << millis / 1000.0 << endl;
+        cout << "  - total generated: " << gen.getTotalGenerated() << endl;
+        cout << "  - total done: " << total << endl;
+        cout << "  - avg. per second: " << total / (double)gen.getCounters().size() << endl;
+        cout << "  - min. per second: " << min << endl;
+        cout << "  - max. per second: " << max << endl;
     }
-    cout << "===============================" << endl;
+    cout << "===============================" << endl << endl;
 }
 
 void ProgramRuntime::workerProcess(int index, shared_ptr<void> msg) {
-    resultWorker.sendResult(
+    resultWorker->sendResult(
             exec(static_pointer_cast<ExecValue>(msg))
     );
 }
@@ -108,11 +137,14 @@ void ProgramRuntime::updateReadonlyState(const std::vector<bool> &writes) {
 }
 
 std::pair< std::vector<bool>, std::vector<bool> > ProgramRuntime::getMessageVars(std::shared_ptr<void> msg) {
+    // setting up data for executor
+    auto mainLocal = make_shared<ExecObject>();
+    auto mainFunction = getProgram()->getFunction("main");
+    for (auto& arg : mainFunction->getArguments()) mainLocal->setFieldByPath(arg, static_pointer_cast<ExecObject>(msg));
+
     // determine sets of variables according to expressions found by analyzer
     set<string> readVars;
     set<string> writeVars;
-    auto mainFunction = getProgram()->getFunction("main");
-    auto mainLocal = static_pointer_cast<ExecObject>(msg);
     for (auto& var : variables) {
         // handling read expressions
         for (auto& exp : mainFunction->getReadExpressions()[var]) {

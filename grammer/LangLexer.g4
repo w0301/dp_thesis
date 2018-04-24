@@ -84,6 +84,11 @@ LOCAL_OBJ_PATH
   : 'local' (DOT NAME)*
   ;
 
+// skipping comments
+COMMENT
+  :  '#' ~( '\r' | '\n' )* -> channel(HIDDEN)
+  ;
+
 // skipping whitespaces
 WHITESPACE_SKIP
   : [ \t\r\n]+ -> channel(HIDDEN)

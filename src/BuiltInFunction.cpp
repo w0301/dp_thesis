@@ -56,6 +56,9 @@ void initBuiltInFunctions() {
                     make_shared<ExecBoolean>(args.get<ExecString>(0)->getValue() == args.get<ExecString>(1)->getValue())
             );
         }
+        if (args.get<ExecNull>(0) && args.get<ExecNull>(1)) {
+            return static_pointer_cast<ExecValue>(make_shared<ExecBoolean>(true));
+        }
 
         return static_pointer_cast<ExecValue>(make_shared<ExecBoolean>(false));
     });

@@ -1,0 +1,27 @@
+
+def main(msg)
+    # initialization
+    local.test = _eq(local.msg.type, "init")
+    if local.test
+        global.x = 0
+        global.y = 0
+        global.z = 0
+    end
+
+    # real work
+    local.xInc = _eq(local.msg.type, "xInc")
+    local.yInc = _eq(local.msg.type, "yInc")
+    local.zInc = _eq(local.msg.type, "zInc")
+    if local.xInc
+        global.x = _add(global.x, 1)
+        local._ = _sleep(5, 1)
+    else if local.yInc
+        global.y = _add(global.y, 1)
+        local._ = _sleep(5, 1)
+    else if local.zInc
+        global.z = _add(global.z, 1)
+        local._ = _sleep(5, 1)
+    end
+
+    return local.msg
+end

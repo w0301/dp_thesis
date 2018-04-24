@@ -32,7 +32,8 @@ void ProgramAnalyzer::analyze() {
         function->setWriteExpressions(writeExpressions);
     }
 
-    // just some debug prints
+    // printing analysis
+    cout << "======== Code analysis ========" << endl;
     for (auto& function : program->getFunctions()) {
         cout << "function " << function->getName() << ":" << endl;
         cout << "  - recursive: " << function->isRecursive() << endl;
@@ -61,6 +62,7 @@ void ProgramAnalyzer::analyze() {
             }
         }
     }
+    cout << "===============================" << endl << endl;
 }
 
 bool ProgramAnalyzer::isFunctionRecursive(shared_ptr<Function> origFunction, shared_ptr<Function> currFunction,

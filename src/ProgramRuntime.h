@@ -39,6 +39,11 @@ class ResultWorker : public Worker<ResultWorkerMessage> {
 public:
     explicit ResultWorker(ProgramRuntime& runtime) : runtime(runtime) { }
 
+    void start() override {
+        lastRoundTime = lastResultTime = std::chrono::high_resolution_clock::now();
+        Worker::start();
+    }
+
     void stop(bool wait) {
         send(ResultWorkerMessage(wait ? ResultWorkerMessage::LazyExit : ResultWorkerMessage::Exit, std::shared_ptr<ExecValue>()));
         join();
@@ -52,6 +57,7 @@ protected:
     bool process(ResultWorkerMessage&) override;
 
 private:
+    std::chrono::time_point<std::chrono::high_resolution_clock> lastRoundTime;
     std::chrono::time_point<std::chrono::high_resolution_clock> lastResultTime;
     ProgramRuntime& runtime;
 };
@@ -70,12 +76,17 @@ public:
         return counters;
     }
 
+    int getTotalGenerated() const {
+        return totalGenerated;
+    }
+
     bool isGenerationNeeded(std::chrono::time_point<std::chrono::high_resolution_clock> time) const {
         return time >= lastGenerateTime + interval;
     }
 
     std::shared_ptr<ExecValue> generate(std::chrono::time_point<std::chrono::high_resolution_clock> time) {
         lastGenerateTime = time;
+        totalGenerated += 1;
         return generateFunc();
     }
 
@@ -96,6 +107,7 @@ private:
 
     std::chrono::time_point<std::chrono::high_resolution_clock> lastGenerateTime;
 
+    int totalGenerated = 0;
     int currCounter = 0;
     std::vector<int> counters;
 };
@@ -107,13 +119,13 @@ public:
     void run(int);
 
     void start() override {
-        resultWorker.start();
+        resultWorker->start();
         Scheduler::start();
     }
 
     void stop(bool wait) override {
         Scheduler::stop(wait);
-        resultWorker.stop(wait);
+        resultWorker->stop(wait);
     }
 
     void incStatCounter(std::shared_ptr<ExecValue> msg) {
@@ -127,6 +139,10 @@ public:
     }
 
 protected:
+    virtual std::shared_ptr<ExecObject> createInitMessage() const {
+        return std::shared_ptr<ExecObject>();
+    }
+
     void registerMessageGenerator(const std::string &name, int interval,
                                   const std::function<std::shared_ptr<ExecValue>()> &generateFunc,
                                   const std::function<bool(std::shared_ptr<ExecValue>)> &isMessageFunc) {
@@ -142,7 +158,7 @@ protected:
     std::pair<std::vector<bool>, std::vector<bool> > getMessageVars(std::shared_ptr<void>) override;
 
 private:
-    ResultWorker resultWorker;
+    std::shared_ptr<ResultWorker> resultWorker;
     std::vector<MessageGenerator> messageGenerators;
 
     std::shared_ptr<ExecObject> readonlyGlobal;

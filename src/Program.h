@@ -386,8 +386,8 @@ public:
 
     std::set<std::string> getAllVariables() {
         std::set<std::string> res;
-        for (auto& var : readVariables) res.insert(var.substr(GLOBAL_PREFIX.length()));
-        for (auto& var : writeVariables) res.insert(var.substr(GLOBAL_PREFIX.length()));
+        for (auto& var : readVariables) res.insert(var);
+        for (auto& var : writeVariables) res.insert(var);
         return res;
     }
 

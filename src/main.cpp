@@ -20,12 +20,26 @@ void runSchedulerTest(int msgsCount, int varsCount) {
     TestRuntime(Scheduler::WLocking, 4, varsCount, messages).run(ref);
 }
 
-void runServerTest() {
-    ServerRuntime("codes/Server.lang", Scheduler::RWLocking, 4).run(100000);
+void runServerTest(int seconds) {
+    cout << ">>>>>> Testing 1 worker for " << seconds << " seconds:" << endl;
+    ServerRuntime("codes/Server.lang", Scheduler::RWLocking, 1).run(seconds * 1000);
+
+    cout << ">>>>>> Testing 2 workers for " << seconds << " seconds:" << endl;
+    ServerRuntime("codes/Server.lang", Scheduler::RWLocking, 2).run(seconds * 1000);
+
+    cout << ">>>>>> Testing 4 workers for " << seconds << " seconds:" << endl;
+    ServerRuntime("codes/Server.lang", Scheduler::RWLocking, 4).run(seconds * 1000);
 }
 
-void runGuiTest() {
-    ServerRuntime("codes/Gui.lang", Scheduler::WLocking, 4).run(100000);
+void runGuiTest(int seconds) {
+    cout << ">>>>>> Testing 1 worker for " << seconds << " seconds:" << endl;
+    GuiRuntime("codes/Gui.lang", Scheduler::WLocking, 1).run(seconds * 1000);
+
+    cout << ">>>>>> Testing 2 workers for " << seconds << " seconds:" << endl;
+    GuiRuntime("codes/Gui.lang", Scheduler::WLocking, 2).run(seconds * 1000);
+
+    cout << ">>>>>> Testing 4 workers for " << seconds << " seconds:" << endl;
+    GuiRuntime("codes/Gui.lang", Scheduler::WLocking, 4).run(seconds * 1000);
 }
 
 void runInterpreter(const string& programPath, const string& strArg) {
@@ -49,10 +63,12 @@ int main(int argc, char *argv[]) {
         runSchedulerTest(msgsCount, varsCount);
     }
     else if (argc > 1 && string(argv[1]) == "--test-server") {
-        runServerTest();
+        int seconds = (argc > 2 ? stoi(argv[2]) : 10);
+        runServerTest(seconds);
     }
     else if (argc > 1 && string(argv[1]) == "--test-gui") {
-        runGuiTest();
+        int seconds = (argc > 2 ? stoi(argv[2]) : 10);
+        runGuiTest(seconds);
     }
     else if (argc > 1) {
         runInterpreter(string(argv[1]), argc > 2 ? string(argv[2]) : "");
