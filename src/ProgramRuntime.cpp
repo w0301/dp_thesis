@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 
 #include "ProgramRuntime.h"
 
@@ -65,13 +66,17 @@ void ProgramRuntime::run(int millis) {
 
     chrono::milliseconds duration(millis);
 
+    vector<MessageGenerator*> generators;
+    for (auto& gen : messageGenerators) generators.push_back(&gen);
+
     auto startTime = chrono::high_resolution_clock::now();
     while (true) {
         auto currTime = chrono::high_resolution_clock::now();
 
         // sending any new messages
-        for (auto& gen : messageGenerators) {
-            if (gen.isGenerationNeeded(currTime)) schedule(gen.generate(currTime));
+        random_shuffle(generators.begin(), generators.end());
+        for (auto& gen : generators) {
+            if (gen->isGenerationNeeded(currTime)) schedule(gen->generate(currTime));
         }
 
         // waiting little bit
@@ -95,6 +100,7 @@ void ProgramRuntime::run(int millis) {
 
     // printing stats data
     cout << "===== Messages statistics =====" << endl;
+    int totalDoneMessages = 0;
     for (auto& gen : messageGenerators) {
         cout << gen.getName() << ":" << endl;
 
@@ -104,6 +110,7 @@ void ProgramRuntime::run(int millis) {
             if (c < min) min = c;
             if (c > max) max = c;
         }
+        totalDoneMessages += total;
 
         cout << "  - total seconds: " << millis / 1000.0 << endl;
         cout << "  - total generated: " << gen.getTotalGenerated() << endl;
@@ -112,6 +119,9 @@ void ProgramRuntime::run(int millis) {
         cout << "  - min. per second: " << min << endl;
         cout << "  - max. per second: " << max << endl;
     }
+    cout << "-------------------------------" << endl;
+    cout << "  - absolute total done: " << totalDoneMessages << endl;
+    cout << "  - absolute avg. per second: " << totalDoneMessages / (millis / 1000.0) << endl;
     cout << "===============================" << endl << endl;
 }
 
@@ -137,6 +147,10 @@ void ProgramRuntime::updateReadonlyState(const std::vector<bool> &writes) {
 }
 
 std::pair< std::vector<bool>, std::vector<bool> > ProgramRuntime::getMessageVars(std::shared_ptr<void> msg) {
+    if (getWorkersCount() == 1) {
+        return make_pair(vector<bool>(getVarsCount(), false), vector<bool>(getVarsCount(), false));
+    }
+
     // setting up data for executor
     auto mainLocal = make_shared<ExecObject>();
     auto mainFunction = getProgram()->getFunction("main");

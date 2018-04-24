@@ -1,26 +1,103 @@
 
+def simulateWrite(db)
+    local.db.writes = _add(local.db.writes, 1)
+    local._ = _sleep(50, 0)
+
+    return local.db
+end
+
+def simulateRead(db)
+    local.db.reads = _add(local.db.reads, 1)
+    local._ = _sleep(10, 0)
+
+    return local.db
+end
+
+def isBitSet(bits, n)
+    local.nCh = _ch(local.bits, local.n)
+    local.test = _eq(local.nCh, '1')
+    return local.test
+end
+
 def main(msg)
     # initialization
     local.test = _eq(local.msg.type, "init")
     if local.test
-        global.x = 0
-        global.y = 0
-        global.z = 0
+        global.db1.data = ""
+        global.db1.reads = 0
+        global.db1.writes = 0
+
+        global.db2.data = ""
+        global.db2.reads = 0
+        global.db2.writes = 0
+
+        global.db3.data = ""
+        global.db3.reads = 0
+        global.db3.writes = 0
+
+        global.db4.data = ""
+        global.db4.reads = 0
+        global.db4.writes = 0
     end
 
-    # real work
-    local.xInc = _eq(local.msg.type, "xInc")
-    local.yInc = _eq(local.msg.type, "yInc")
-    local.zInc = _eq(local.msg.type, "zInc")
-    if local.xInc
-        global.x = _add(global.x, 1)
-        local._ = _sleep(5, 1)
-    else if local.yInc
-        global.y = _add(global.y, 1)
-        local._ = _sleep(5, 1)
-    else if local.zInc
-        global.z = _add(global.z, 1)
-        local._ = _sleep(5, 1)
+    # do real work
+    local.test = _eq(local.msg.type, "work")
+    if local.test
+        # doing required writes
+        local.writeDb1 = isBitSet(local.msg.writes, 0)
+        local.writeDb2 = isBitSet(local.msg.writes, 1)
+        local.writeDb3 = isBitSet(local.msg.writes, 2)
+        local.writeDb4 = isBitSet(local.msg.writes, 3)
+
+        if local.writeDb1
+            local.newDb = simulateWrite(global.db1)
+            global.db1.data = local.newDb.data
+            global.db1.writes = local.newDb.writes
+        end
+
+        if local.writeDb2
+            local.newDb = simulateWrite(global.db2)
+            global.db2.data = local.newDb.data
+            global.db2.writes = local.newDb.writes
+        end
+
+        if local.writeDb3
+            local.newDb = simulateWrite(global.db3)
+            global.db3.data = local.newDb.data
+            global.db3.writes = local.newDb.writes
+        end
+
+        if local.writeDb4
+            local.newDb = simulateWrite(global.db4)
+            global.db4.data = local.newDb.data
+            global.db4.writes = local.newDb.writes
+        end
+
+        # doing required reads
+        local.readDb1 = isBitSet(local.msg.reads, 0)
+        local.readDb2 = isBitSet(local.msg.reads, 1)
+        local.readDb3 = isBitSet(local.msg.reads, 2)
+        local.readDb4 = isBitSet(local.msg.reads, 3)
+
+        if local.readDb1
+            local.newDb = simulateRead(global.db1)
+            global.db1.reads = local.newDb.reads
+        end
+
+        if local.readDb2
+            local.newDb = simulateRead(global.db2)
+            global.db2.reads = local.newDb.reads
+        end
+
+        if local.readDb3
+            local.newDb = simulateRead(global.db3)
+            global.db3.reads = local.newDb.reads
+        end
+
+        if local.readDb4
+            local.newDb = simulateRead(global.db4)
+            global.db4.reads = local.newDb.reads
+        end
     end
 
     return local.msg

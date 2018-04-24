@@ -104,6 +104,8 @@ SchedulerWorker* Scheduler::getAvailableWorker() {
 }
 
 bool Scheduler::isSchedulable(const std::vector<bool>& readVars, const std::vector<bool>& writeVars) {
+    if (getWorkersCount() == 1) return true;
+
     for (int i = 0; i < varsCount; i++) {
         bool locked = false;
         bool needLocked = false;

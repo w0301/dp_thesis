@@ -218,15 +218,6 @@ void ProgramAnalyzer::determineFunctionStatementExpressions(shared_ptr<Statement
                     make_shared<ConditionExpression>(currCond, valueExp, oldReturn->getElseExpression())
             );
         }
-
-        // TODO : should following easier approach be used instead of the one above??? ... probably the one above is correct
-        // setting actual return expression only if was not set previously otherwise it is undetermined
-        /*if (!localExpressions["&return&"]) {
-            localExpressions["&return&"] = make_shared<ConditionExpression>(currCond, valueExp, nullExpression);
-        }
-        else {
-            localExpressions["&return&"] = make_shared<UndeterminedExpression>();
-        }*/
     }
     else if (dynamic_pointer_cast<Condition>(currStatement)) {
         auto cond = dynamic_pointer_cast<Condition>(currStatement);
