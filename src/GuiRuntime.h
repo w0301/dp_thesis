@@ -6,6 +6,9 @@
 class GuiRuntime : public ProgramRuntime {
 public:
     explicit GuiRuntime(const std::string& filePath, Scheduler::Type type, int workers);
+
+protected:
+    std::shared_ptr<ExecObject> createInitMessage() const override;
 };
 
 

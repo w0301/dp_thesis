@@ -100,6 +100,7 @@ void ExecObject::setFieldByPath(const string& path, shared_ptr<ExecValue> val) {
 
 shared_ptr<ExecValue> ExecObject::clone() const {
     auto res = make_shared<ExecObject>();
+    res->stickyFieldPaths = stickyFieldPaths;
     for (auto& val : fields) res->setField(val.first, val.second ? val.second->clone() : shared_ptr<ExecValue>());
     return res;
 }

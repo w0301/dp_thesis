@@ -1,0 +1,63 @@
+
+def simulateGuiStateUpdate(guiState)
+    local.guiState.writes = _add(local.guiState.writes, 1)
+
+    return local.guiState
+end
+
+def simulateDataUpdate(data)
+    local.data.writes = _add(local.data.writes, 1)
+    local._ = _sleep(50, 0)
+
+    return local.data
+end
+
+def simulateRealTimeDataUpdate(data)
+    local.data.writes = _add(local.data.writes, 1)
+    local._ = _sleep(10, 0)
+
+    return local.data
+end
+
+def simulateRender(guiState, data, realTimeData)
+    local._ = _sleep(10, 0)
+
+    return local.data
+end
+
+def main(msg)
+    # initialization
+    local.test = _eq(local.msg.type, "init")
+    if local.test
+        global.guiState.writes = 0
+
+        global.data.writes = 0
+
+        global.realTimeData.writes = 0
+    end
+
+    # handling update messages
+    local.test = _eq(local.msg.type, "gui")
+    if local.test
+        global.guiState = simulateGuiStateUpdate(global.guiState)
+    end
+
+    local.test = _eq(local.msg.type, "data")
+    if local.test
+        local.newData = simulateDataUpdate(global.data)
+        global.data.writes = local.newData.writes
+    end
+
+    local.test = _eq(local.msg.type, "realTimeData")
+    if local.test
+        local.newData = simulateRealTimeDataUpdate(global.data)
+        global.realTimeData.writes = local.newData.writes
+    end
+
+    local.test = _eq(local.msg.type, "render")
+    if local.test
+        local._ = simulateRender(global.guiState, global.data, global.realTimeData)
+    end
+
+    return local.msg
+end

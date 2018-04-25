@@ -148,7 +148,7 @@ void ProgramRuntime::updateReadonlyState(const std::vector<bool> &writes) {
 
 std::pair< std::vector<bool>, std::vector<bool> > ProgramRuntime::getMessageVars(std::shared_ptr<void> msg) {
     if (getWorkersCount() == 1) {
-        return make_pair(vector<bool>(getVarsCount(), false), vector<bool>(getVarsCount(), false));
+        return make_pair(vector<bool>(getVarsCount(), true), vector<bool>(getVarsCount(), true));
     }
 
     // setting up data for executor
