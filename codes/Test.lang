@@ -46,24 +46,49 @@ def inMain(msg)
     return local.msg.type
 end
 
-def main(msg)
-    local.msg2.type = local.msg
-    local.res = inMain(local.msg2)
+def check2(str, ch, index)
+    local.len = _length(local.str)
+    local.test = _geqt(local.index, local.len)
+    if local.test
+        return false
+    else
 
-    local.test1 = _eq(local.res, "type1")
-    local.test2 = _eq(local.res, "type2")
-
-    local.test3aux = _eq(local.test1, local.test2)
-    local.test3aux2 = _neg(local.test1)
-    local.test3 = _and(local.test3aux, local.test3aux2)
-
-    if local.test1
-        global.res.wasType1 = true
-    else if local.test2
-        global.res.wasType2 = true
-    else if local.test3
-        global.res.wasUnknown = true
+    local.strCh = _ch(local.str, local.index)
+    local.test = _eq(local.ch, local.strCh)
+    if local.test
+       return true
     end
 
-    return global.res
+    local.nIndex = _add(local.index, 1)
+    local.test = check2(local.str, local.ch, local.nIndex)
+    return local.test
+end
+
+def check3(data)
+    local.test = _eq(local.data, global.data)
+    return local.test
+end
+
+def check(data, index)
+    local.test = _eq(local.index, 0)
+    if local.test
+        return false
+    end
+
+    local.n = _add(local.index, global.n)
+    local.test = check(local.data, local.n)
+    return local.test
+end
+
+def main(msg)
+    global.n = -1
+
+    local.test = check(local.msg, 5)
+    if local.test
+        global.type1data = "data"
+    else
+        global.type2Data = "otherData"
+    end
+
+    return local.msg
 end
